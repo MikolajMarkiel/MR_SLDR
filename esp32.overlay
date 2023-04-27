@@ -1,0 +1,26 @@
+/ {
+    aliases {
+        // steppermotor = &stepper_motor;
+		// steppermotor = &blinking_led;
+    };
+	leds {
+		compatible = "gpio-leds";
+		blinking_led: blinking_led {
+			gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+		};
+		stepper_motor_step: stepper_motor_step {
+			gpios = <&gpio0 14 GPIO_ACTIVE_HIGH>;
+		};
+		stepper_motor_dir: stepper_motor_dir {
+			gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
+		};
+		stepper_motor_en: stepper_motor_en {
+			gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>;
+		};
+	};
+};
+&timer0 {
+			compatible = "espressif,esp32-timer";
+          status = "okay";
+          prescaler = <10>;
+};
