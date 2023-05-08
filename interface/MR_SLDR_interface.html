@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>BLE Slider</title>
+</head>
+<style>
+    #writeValueStartPos, #notifyValueStartPos {
+        display: inline-block;
+    }
+    #writeValueEndPos, #notifyValueEndPos {
+        display: inline-block;
+    }
+    #writeValueDuration, #notifyValueDuration {
+        display: inline-block;
+    }
+    #writeValueDuration, #notifyValueDuration {
+        display: inline-block;
+    }
+    #writeValueSpeed, #notifyValueSpeed {
+        display: inline-block;
+    }
+    #status, #notifyStatus {
+        display: inline-block;
+    }
+    #cmdStart, #cmdStop {
+        display: inline-block;
+    }
+    
+    
+</style>
+<body>
+    <h1>BLE Slider</h1>
+    <button id="scanButton">Scan for Devices</button>
+    <button id="connectButton" disabled>Connect</button>
+    
+    <br><br>
+    <label for="startPos">Start pos:</label>
+    <button id="writeStartPosButton" disabled>Write</button>
+    <input type="text" id="writeValueStartPos">
+    <div id="notifyValueStartPos"></div>
+    <br><br>
+    <label for="endPos">End pos:</label>
+    <button id="writeEndPosButton" disabled>Write</button>
+    <input type="text" id="writeValueEndPos">
+    <div id="notifyValueEndPos"></div>
+    <br><br>
+    <label for="duration">Duration:</label>
+    <button id="writeDurationButton" disabled>Write</button>
+    <input type="text" id="writeValueDuration">
+    <div id="notifyValueDuration"></div>
+    <br><br>
+    <label for="speed">Speed:</label>
+    <button id="writeSpeedButton" disabled>Write</button>
+    <input type="text" id="writeValueSpeed">
+    <div id="notifyValueSpeed"></div>
+    <br><br>
+    
+    <label for="status">Status:</label>     <div id="notifyStatus"></div>
+    <br><br>
+    <label for="cmdStart"></label>
+    <button id="startButton" disabled>Start!</button>
+    
+    <label for="cmdStop"></label>
+    <button id="stopButton" disabled>Stop!</button>
+        
+    <br><br>
+    
+    <ul id="deviceList"></ul>
+    <br><br>
+    
+    
+    <script>
+        
+        const serviceUuid = '12340000-1234-5678-1234-56789abcdef0';
+        
+        const uuid_status    = '12340001-1234-5678-1234-56789abcdef0';
+        const uuid_command   = '12340002-1234-5678-1234-56789abcdef0';
+        const uuid_start_pos = '12340010-1234-5678-1234-56789abcdef0';
+        const uuid_end_pos   = '12340011-1234-5678-1234-56789abcdef0';
+        const uuid_duration  = '12340012-1234-5678-1234-56789abcdef0';
+	const uuid_speed     = '12340013-1234-5678-1234-56789abcdef0';
+	
+        
+        let device, ch_start_pos, ch_end_pos, ch_duration, ch_status, ch_cmd, ch_speed;
+
+        // Function to scan for nearby advertising BLE devices
+        async function scanForDevices() {
+            try {
+                // Check if Web Bluetooth API is available
+                if (!navigator.bluetooth) {
+                    throw new Error('Web Bluetooth API not available');
+                }
+
+                // Request permission to access Bluetooth devices
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: [serviceUuid] }]
+                });
+                console.log('Device found:', device.name);
+                const listItem = document.createElement('li');
+                listItem.textContent = device.name;
+                document.getElementById('deviceList').appendChild(listItem);
+
+                // Enable the connect button
+                document.getElementById('connectButton').disabled = false;
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+
+        // Function to connect to the selected device
+        async function connectToDevice() {
+            try {
+                // Check if Web Bluetooth API is available
+                if (!navigator.bluetooth) {
+                    throw new Error('Web Bluetooth API not available');
+                }
+
+                // Connect to the device
+                const server = await device.gatt.connect();
+                console.log('Connected to device:', device.name);
+
+                // Get service the
+                const service = await server.getPrimaryService(serviceUuid);
+
+                // Get the characteristics
+                ch_start_pos = await service.getCharacteristic(uuid_start_pos);
+                ch_end_pos = await service.getCharacteristic(uuid_end_pos);
+                ch_duration = await service.getCharacteristic(uuid_duration);
+                ch_status = await service.getCharacteristic(uuid_status);
+                ch_cmd = await service.getCharacteristic(uuid_command);
+                ch_speed = await service.getCharacteristic(uuid_speed);
+                
+		
+                // Enable the write button for each characteristic
+                document.getElementById('writeStartPosButton').disabled = false;
+                document.getElementById('writeEndPosButton').disabled = false;
+                document.getElementById('writeDurationButton').disabled = false;
+                document.getElementById('writeSpeedButton').disabled = false;
+                document.getElementById('startButton').disabled = false;
+                document.getElementById('stopButton').disabled = false;
+
+                // Enable notifications for each characteristic
+                await ch_start_pos.startNotifications();
+                await ch_end_pos.startNotifications();
+                await ch_duration.startNotifications();
+                await ch_speed.startNotifications();
+                await ch_status.startNotifications();
+                
+                // Set up event listener for the characteristics
+                ch_start_pos.addEventListener('characteristicvaluechanged', handleNotification);
+                ch_end_pos.addEventListener('characteristicvaluechanged', handleNotification);
+                ch_duration.addEventListener('characteristicvaluechanged', handleNotification);
+                ch_speed.addEventListener('characteristicvaluechanged', handleNotification);
+                ch_status.addEventListener('characteristicvaluechanged', handleNotification);
+		
+		readAllValues()
+            } catch (error) {
+                console.error(error);
+            }
+        }
+	
+        // Handle notifications for the characteristics
+        function handleNotification(event) {
+            const value = event.target.value;
+            const dataView = new DataView(value.buffer);
+    	    const decodedValue = dataView.getInt32(0, true);
+    	    const decodedText = new TextDecoder().decode(value);
+            if (event.target.uuid === uuid_start_pos) {
+                document.getElementById('notifyValueStartPos').textContent = decodedValue;
+            } else if (event.target.uuid === uuid_end_pos) {
+                document.getElementById('notifyValueEndPos').textContent = decodedValue;
+            } else if (event.target.uuid === uuid_duration) {
+                document.getElementById('notifyValueDuration').textContent = decodedValue;
+            } else if (event.target.uuid === uuid_speed) {
+                document.getElementById('notifyValueSpeed').textContent = decodedValue;
+            } else if (event.target.uuid === uuid_status) {
+                document.getElementById('notifyStatus').textContent = decodedText;
+            }
+        }
+
+        // Function to write a value to a characteristic
+        async function writeValue(characteristic, writeValueElement) {
+            try {
+                // Get the value to write
+                const valueToWrite = writeValueElement.value;
+	
+                // Create a Uint8Array with the value to write
+                const valueArray = new TextEncoder().encode(valueToWrite);
+		const valueToWriteUint8 = new Uint8Array(valueArray);
+                // Write the value to the characteristic
+                await characteristic.writeValue(valueToWriteUint8);
+                console.log('Value written:', valueToWriteUint8);
+                writeValueElement.value = '';
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        async function writeCmd(characteristic, writeValueElement) {
+ 	   try {
+ 	       // Get the value to write
+		const valueToWrite = writeValueElement;
+
+		// Create a Uint8Array with the value to write
+		const valueArray = new TextEncoder().encode(valueToWrite);
+		const valueToWriteUint8 = new Uint8Array(valueArray);
+		// Write the value to the characteristic
+		await characteristic.writeValue(valueToWriteUint8);
+		console.log('Value written:', valueToWriteUint8);
+		writeValueElement.value = '';
+	    } catch (error) {
+		console.error(error);
+	    }
+	}
+        
+	async function readValue(characteristic, readValueElement) {
+	    try {
+		// Read the value of the characteristic
+		const value = await characteristic.readValue();
+		readValueElement.textContent = new TextDecoder().decode(value);
+	    } catch (error) {
+		console.error(error);
+		readValueElement.textContent = 'Error';
+	    }
+	}
+	async function readString(characteristic, readValueElement) {
+	    try {
+		// Read the value of the characteristic
+		const value = await characteristic.readValue();
+		console.log('value', value);
+//		readValueElement.textContent = new TextEncoder().encode(value);
+		readValueElement.textContent = value.buffer;
+	    } catch (error) {
+		console.error(error);
+		readValueElement.textContent = 'Error';
+	    }
+	}
+	async function readAllValues() {
+	    await readValue(ch_start_pos, document.getElementById('notifyValueStartPos'));
+	    await readValue(ch_end_pos, document.getElementById('notifyValueEndPos'));
+	    await readValue(ch_duration, document.getElementById('notifyValueDuration'));
+    	    await readValue(ch_speed, document.getElementById('notifyValueSpeed'));
+    	    //await readValue(ch_status, document.getElementById('notifyStatus'));
+	}
+        // Add event listener to the scan button
+        document.getElementById('scanButton').addEventListener('click', scanForDevices);
+
+        // Add event listenerto the connect button
+        document.getElementById('connectButton').addEventListener('click', connectToDevice);
+
+        // Add event listener to the write start position button
+        document.getElementById('writeStartPosButton').addEventListener('click', function() {
+            writeValue(ch_start_pos, document.getElementById('writeValueStartPos'));
+        });
+
+        // Add event listener to the write end position button
+        document.getElementById('writeEndPosButton').addEventListener('click', function() {
+            writeValue(ch_end_pos, document.getElementById('writeValueEndPos'));
+        });
+
+        // Add event listener to the write duration button
+        document.getElementById('writeDurationButton').addEventListener('click', function() {
+            writeValue(ch_duration, document.getElementById('writeValueDuration'));
+        });
+   
+        // Add event listener to the write duration button
+        document.getElementById('writeSpeedButton').addEventListener('click', function() {
+            writeValue(ch_speed, document.getElementById('writeValueSpeed'));
+        });
+        
+	// Add event listener to the write duration button
+        document.getElementById('startButton').addEventListener('click', function() {
+            writeCmd(ch_cmd, '1');
+        });
+        
+        // Add event listener to the write duration button
+        document.getElementById('stopButton').addEventListener('click', function() {
+            writeCmd(ch_cmd, '2');
+        });
+    </script>
+</body>
+</html>

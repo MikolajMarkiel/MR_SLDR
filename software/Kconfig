@@ -1,0 +1,12 @@
+# Copyright (c) 2023 Mikolaj Markiel
+# MIT License
+
+# User config for enabling timer autoreset after getting callback
+# Be sure to use modified version of counter_esp32_tmr.c library
+# More information in README.md file
+
+source "Kconfig.zephyr"
+
+config COUNTER_AUTORELOAD
+  bool
+  default y

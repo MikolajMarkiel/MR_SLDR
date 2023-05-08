@@ -38,6 +38,7 @@ SOFTWARE.
 #include <string.h>
 
 LOG_MODULE_REGISTER(app);
+
 static const struct gpio_dt_spec led =
     GPIO_DT_SPEC_GET(DT_NODELABEL(blinking_led), gpios);
 
@@ -153,7 +154,7 @@ BT_GATT_SERVICE_DEFINE(
     slider_service, BT_GATT_PRIMARY_SERVICE(&slider_service_uuid.uuid),
     BT_GATT_CHARACTERISTIC(&slider_status_uuid.uuid, DEFAULT_RO_PROPS,
                            DEFAULT_RO_PERMS, read_int_param, write_int_param,
-                           &slider_status.status),
+                           slider_status.status),
     BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
     BT_GATT_CHARACTERISTIC(&slider_start_pos_uuid.uuid, DEFAULT_WR_PROPS,
                            DEFAULT_WR_PERMS, read_int_param, write_int_param,
@@ -194,9 +195,9 @@ void bt_notify_differences(const struct bt_gatt_attr *chrc,
   }
   memcpy(old_msg, current_msg, n);
   err = bt_gatt_notify(NULL, chrc, old_msg, sizeof(old_msg));
-  err =
-      err == -ENOTCONN ? 0 : err; // TODO exchange if server has opportunity to
-                                  // know that client notification is enabled
+  err = err == -ENOTCONN ? 0 : err;
+  // TODO exchange if server has opportunity to know that client notification is
+  // enabled
   if (err) {
     LOG_ERR("gatt notify failed, reason: %d", err);
     return;
@@ -227,8 +228,7 @@ void bt_notify_handler() { // TODO: write to a thread
   }
 }
 
-K_THREAD_DEFINE(bt_notifications, 1024, bt_notify_handler, NULL, NULL, NULL, 7,
-                0, 0);
+K_THREAD_DEFINE(bt_notify, 1024, bt_notify_handler, NULL, NULL, NULL, 7, 0, 0);
 
 static void connected(struct bt_conn *conn, uint8_t err) {
   if (err) {
@@ -293,10 +293,13 @@ int led_test_init() {
 
 void main(void) {
   int err;
-  err = stepper_motor_gpio_init();
+  LOG_INF("im here");
+  err = stepper_motor_init();
   if (err) {
     return;
   }
+  LOG_INF("done");
+
   err = led_test_init();
   if (err) {
     return;
