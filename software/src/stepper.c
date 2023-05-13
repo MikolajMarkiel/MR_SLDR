@@ -34,7 +34,16 @@ SOFTWARE.
 
 #define CB_FOR_ONE_STEP 2
 #define US_IN_ONE_SEC 1000000
-#define CB_DELAY(spd) US_IN_ONE_SEC / spd / CB_FOR_ONE_STEP
+#define CB_DELAY(speed) US_IN_ONE_SEC / speed / CB_FOR_ONE_STEP
+
+typedef struct {
+  uint32_t c_step;
+  uint32_t c_delay;
+  uint32_t c_interval;
+  uint32_t max_delay;
+  uint32_t min_delay;
+} stepper_thread_data;
+
 typedef enum {
   FORWARD = 0,
   REVERSE = 1,
@@ -62,13 +71,21 @@ static void select_dir(slider_params *slider) {
   }
 }
 static int timer_enable(const struct device *dev) {
-  timer_status = 1;
-  return counter_start(dev);
+  int err;
+  err = counter_start(dev);
+  if (err == 0) {
+    timer_status = 1;
+  }
+  return err;
 }
 
 static int timer_disable(const struct device *dev) {
-  timer_status = 0;
-  return counter_stop(dev);
+  int err;
+  err = counter_stop(dev);
+  if (err == 0) {
+    timer_status = 0;
+  }
+  return err;
 }
 
 static void count_steps(slider_params *slider) {
@@ -119,18 +136,27 @@ const struct device *const counter_dev = DEVICE_DT_GET(DT_NODELABEL(TIMER));
 static void counter_callback(const struct device *counter_dev, uint8_t chan_id,
                              uint32_t ticks, void *user_data) {
   static uint8_t pin_state = 0;
-  uint32_t *steps = user_data;
+  stepper_thread_data *data = user_data;
+
   pin_state ^= 1;
   if (!pin_state) {
-    (*steps)--;
+    data->c_step--;
   }
   gpio_pin_set_dt(&stepper_motor_step, pin_state);
-  if (*steps == 0) {
+  if (data->c_step == 0) {
     timer_disable(counter_dev);
     STEPPER_MOTOR_DISABLE();
-  } else {
-    counter_set_channel_alarm(counter_dev, ALARM_CHANNEL_ID, &alarm_cfg);
+    return;
   }
+
+  if (data->max_delay - data->c_delay >= data->c_step) {
+    data->c_delay++;
+  } else if (data->c_delay > data->min_delay) {
+    data->c_delay--;
+  }
+
+  alarm_cfg.ticks = counter_us_to_ticks(counter_dev, data->c_delay);
+  counter_set_channel_alarm(counter_dev, ALARM_CHANNEL_ID, &alarm_cfg);
   return;
 }
 
@@ -163,27 +189,47 @@ int stepper_motor_init(void) {
 
   alarm_cfg.flags = 0;
   alarm_cfg.callback = counter_callback;
-  //   alarm_cfg.user_data = NULL;
 
   LOG_INF("stepper motor init successfull\n");
   return 0;
 }
-static int set_interval_process() {
+
+static int set_interval_process(stepper_thread_data *data) {
   int err;
-  uint32_t delay;
+  uint32_t delay_speed;
+  uint32_t delay_soft;
   const uint32_t min_delay = counter_us_to_ticks(counter_dev, MIN_MOTOR_DELAY);
+
   LOG_MODULE_DECLARE(app);
+  if (slider.speed == 0) {
+    LOG_ERR("invalid speed value");
+    return -1;
+  }
+  delay_speed = CB_DELAY(slider.speed);
+  data->c_delay = delay_speed > min_delay ? delay_speed : min_delay;
+  data->min_delay = data->c_delay;
+
+  if (slider.soft_start != 0) {
+    delay_soft = CB_DELAY(slider.soft_start);
+  } else {
+    delay_soft = 0;
+  }
+  data->c_delay = delay_speed > delay_soft ? delay_speed : delay_soft;
+  data->max_delay = delay_soft;
+
+  alarm_cfg.ticks = counter_us_to_ticks(counter_dev, delay_speed);
+
   gpio_pin_set_dt(&stepper_motor_dir, slider.dir);
-  delay = counter_us_to_ticks(counter_dev, CB_DELAY(slider.speed));
-  delay = delay < min_delay ? min_delay : delay;
   STEPPER_MOTOR_ENABLE();
-  alarm_cfg.ticks = counter_us_to_ticks(counter_dev, delay);
+
   err = timer_enable(counter_dev);
   if (err) {
-  } // TODO
+    LOG_ERR("timer_enable failed");
+  }
   err = counter_set_channel_alarm(counter_dev, ALARM_CHANNEL_ID, &alarm_cfg);
   if (err) {
-  } // TODO
+    LOG_ERR("counter set channel alarm failed");
+  }
   return 0;
 }
 
@@ -191,19 +237,19 @@ void slider_process_thread() {
   LOG_MODULE_DECLARE(app);
   int err;
   static uint32_t steps_per_interval;
-  static uint32_t c_interval;
-  static uint32_t c_step;
-  alarm_cfg.user_data = &c_step;
+  static stepper_thread_data data;
+  alarm_cfg.user_data = &data;
   while (1) {
     if (memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) {
       k_msleep(100);
       continue;
     }
     steps_per_interval = slider.steps / slider.interval_steps;
-    for (c_interval = 1; c_interval <= slider.interval_steps; c_interval++) {
-      c_step = steps_per_interval;
-      LOG_INF("interval %d start", c_interval);
-      set_interval_process();
+    for (data.c_interval = 1; data.c_interval <= slider.interval_steps;
+         data.c_interval++) {
+      data.c_step = steps_per_interval;
+      LOG_INF("interval %d start", data.c_interval);
+      set_interval_process(&data);
       while (timer_status) {
         k_msleep(1);
       }
