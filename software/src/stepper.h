@@ -47,11 +47,12 @@ extern "C" {
 
 #define ALARM_CHANNEL_ID 0
 
-#define DEFAULT_START_POS 40
+#define DEFAULT_START_POS 45
 #define DEFAULT_END_POS 50
-#define DEFAULT_SPEED 333
+#define DEFAULT_SPEED 1000
 #define DEFAULT_DIR 1
-#define DEFAULT_INTERVAL_STEPS 0
+#define DEFAULT_INTERVAL_STEPS 10
+#define DEFAULT_INTERVAL_DELAY 100
 #define DEFAULT_SOFT_START 1000
 
 typedef struct slider_params {
@@ -63,6 +64,7 @@ typedef struct slider_params {
   uint32_t speed;
   uint32_t steps;
   uint32_t interval_steps;
+  uint32_t interval_delay;
   uint32_t soft_start;
 } slider_params;
 
