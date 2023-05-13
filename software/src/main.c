@@ -124,7 +124,7 @@ static ssize_t cmd_handler(struct bt_conn *conn,
   uint32_t cmd;
   if (len > sizeof(cmd)) {
     LOG_ERR("wrong cmd input!");
-    memcpy(slider_status.status, SLIDER_STATUS_ERROR, 4);
+    memcpy(slider.status, SLIDER_STATUS_ERROR, 4);
     return len;
   }
   memcpy(&cmd, buf, len);
@@ -132,11 +132,11 @@ static ssize_t cmd_handler(struct bt_conn *conn,
   LOG_INF("cmd handler cmd %d, len: %d", cmd, len);
   switch (cmd) {
   case '1': {
-    memcpy(slider_status.status, SLIDER_STATUS_RUNNING, 4);
+    memcpy(slider.status, SLIDER_STATUS_RUNNING, 4);
     break;
   }
   case '2': {
-    memcpy(slider_status.status, SLIDER_STATUS_HALTED, 4);
+    memcpy(slider.status, SLIDER_STATUS_HALTED, 4);
     break;
   }
   default: {
@@ -154,23 +154,23 @@ BT_GATT_SERVICE_DEFINE(
     slider_service, BT_GATT_PRIMARY_SERVICE(&slider_service_uuid.uuid),
     BT_GATT_CHARACTERISTIC(&slider_status_uuid.uuid, DEFAULT_RO_PROPS,
                            DEFAULT_RO_PERMS, read_int_param, write_int_param,
-                           slider_status.status),
+                           slider.status),
     BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
     BT_GATT_CHARACTERISTIC(&slider_start_pos_uuid.uuid, DEFAULT_WR_PROPS,
                            DEFAULT_WR_PERMS, read_int_param, write_int_param,
-                           &slider_status.start_pos),
+                           &slider.start_pos),
     BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
     BT_GATT_CHARACTERISTIC(&slider_end_pos_uuid.uuid, DEFAULT_WR_PROPS,
                            DEFAULT_WR_PERMS, read_int_param, write_int_param,
-                           &slider_status.end_pos),
+                           &slider.end_pos),
     BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
     BT_GATT_CHARACTERISTIC(&slider_duration_uuid.uuid, DEFAULT_WR_PROPS,
                            DEFAULT_WR_PERMS, read_int_param, write_int_param,
-                           &slider_status.duration),
+                           &slider.duration),
     BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
     BT_GATT_CHARACTERISTIC(&slider_speed_uuid.uuid, DEFAULT_WR_PROPS,
                            DEFAULT_WR_PERMS, read_int_param, write_int_param,
-                           &slider_status.speed),
+                           &slider.speed),
     BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 
     BT_GATT_CHARACTERISTIC(&slider_cmd_uuid.uuid, DEFAULT_WO_PROPS,
@@ -209,21 +209,20 @@ void bt_notify_handler() { // TODO: write to a thread
   while (1) {
     static slider_params old_slider_status;
     bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_STATUS],
-                          &slider_status.status, &old_slider_status.status,
-                          sizeof(slider_status.status));
+                          &slider.status, &old_slider_status.status,
+                          sizeof(slider.status));
     bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_START_POS],
-                          &slider_status.start_pos,
-                          &old_slider_status.start_pos,
-                          sizeof(slider_status.start_pos));
+                          &slider.start_pos, &old_slider_status.start_pos,
+                          sizeof(slider.start_pos));
     bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_END_POS],
-                          &slider_status.end_pos, &old_slider_status.end_pos,
-                          sizeof(slider_status.end_pos));
+                          &slider.end_pos, &old_slider_status.end_pos,
+                          sizeof(slider.end_pos));
     bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_DURATION],
-                          &slider_status.duration, &old_slider_status.duration,
-                          sizeof(slider_status.duration));
+                          &slider.duration, &old_slider_status.duration,
+                          sizeof(slider.duration));
     bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_SPEED],
-                          &slider_status.speed, &old_slider_status.speed,
-                          sizeof(slider_status.speed));
+                          &slider.speed, &old_slider_status.speed,
+                          sizeof(slider.speed));
     k_msleep(100);
   }
 }
@@ -328,8 +327,8 @@ void main(void) {
   while (1) {
     gpio_pin_toggle_dt(&led);
     k_msleep(1000);
-    if (!memcmp(slider_status.status, SLIDER_STATUS_HALTED, 4)) {
-      memcpy(slider_status.status, SLIDER_STATUS_IDLE, 4);
+    if (!memcmp(slider.status, SLIDER_STATUS_HALTED, 4)) {
+      memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
     }
   }
 }

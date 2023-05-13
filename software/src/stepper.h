@@ -39,16 +39,20 @@ extern "C" {
 #define SLIDER_STATUS_HALTED "Halt"
 #define SLIDER_STATUS_ERROR "Err"
 
-#define STEPS_FACTOR 100   // <x> steps for 1 mm move
-#define MAX_MOTOR_SPEED 50 // min duration of signal for motor driver is 50us
+#define STEPS_FACTOR 100 // <x> steps for 1 mm move
+// #define MAX_MOTOR_SPEED 50 // min duration of signal for motor driver is 50us
 #define MIN_MOTOR_SPEED 5000
+#define MIN_MOTOR_DELAY 50
 // TODO: count precise MAX_MOTOR_SPEED
 
 #define ALARM_CHANNEL_ID 0
 
-#define DEFAULT_START_POS 0
+#define DEFAULT_START_POS 40
 #define DEFAULT_END_POS 50
-#define DEFAULT_SPEED 500
+#define DEFAULT_SPEED 333
+#define DEFAULT_DIR 1
+#define DEFAULT_INTERVAL_STEPS 0
+#define DEFAULT_SOFT_START 1000
 
 typedef struct slider_params {
   char status[10];
@@ -58,9 +62,11 @@ typedef struct slider_params {
   uint32_t duration;
   uint32_t speed;
   uint32_t steps;
+  uint32_t interval_steps;
+  uint32_t soft_start;
 } slider_params;
 
-extern slider_params slider_status;
+extern slider_params slider;
 
 int stepper_motor_init(void);
 

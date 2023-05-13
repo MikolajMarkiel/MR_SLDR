@@ -29,13 +29,18 @@ SOFTWARE.
 #include <zephyr/logging/log.h>
 
 #define TIMER timer0
+#define STEPPER_MOTOR_ENABLE() gpio_pin_set_dt(&stepper_motor_en, 0)
+#define STEPPER_MOTOR_DISABLE() gpio_pin_set_dt(&stepper_motor_en, 1)
 
+#define CB_FOR_ONE_STEP 2
+#define US_IN_ONE_SEC 1000000
+#define CB_DELAY(spd) US_IN_ONE_SEC / spd / CB_FOR_ONE_STEP
 typedef enum {
   FORWARD = 0,
   REVERSE = 1,
 } T_DIR;
 
-slider_params slider_status;
+slider_params slider;
 
 struct counter_alarm_cfg alarm_cfg;
 
@@ -71,10 +76,14 @@ static void count_duration(slider_params *slider) {
 }
 
 static void slider_init_params(slider_params *slider) {
-  memcpy(slider->status, SLIDER_STATUS_IDLE, sizeof(SLIDER_STATUS_IDLE));
+  //   memcpy(slider->status, SLIDER_STATUS_IDLE, sizeof(SLIDER_STATUS_IDLE));
+  memcpy(slider->status, SLIDER_STATUS_RUNNING, sizeof(SLIDER_STATUS_RUNNING));
   slider->start_pos = DEFAULT_START_POS;
   slider->end_pos = DEFAULT_END_POS;
   slider->speed = DEFAULT_SPEED;
+  slider->dir = DEFAULT_DIR;
+  slider->interval_steps = DEFAULT_INTERVAL_STEPS;
+  slider->soft_start = DEFAULT_SOFT_START;
   count_steps(slider);
   count_duration(slider);
 }
@@ -98,15 +107,22 @@ const struct device *const counter_dev = DEVICE_DT_GET(DT_NODELABEL(TIMER));
 
 static void counter_callback(const struct device *counter_dev, uint8_t chan_id,
                              uint32_t ticks, void *user_data) {
-  gpio_pin_toggle_dt(&stepper_motor_step);
   struct counter_alarm_cfg *cfg = user_data;
+  static uint8_t step_done = 0;
+  gpio_pin_toggle_dt(&stepper_motor_step);
   if (steps == 0) {
     counter_stop(counter_dev);
-    memcpy(slider_status.status, SLIDER_STATUS_IDLE, 4);
+    memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
+    STEPPER_MOTOR_DISABLE();
     return;
   }
   counter_set_channel_alarm(counter_dev, ALARM_CHANNEL_ID, &alarm_cfg);
-  steps--;
+  if (step_done) {
+    steps--;
+    step_done = 0;
+  } else {
+    step_done = 1;
+  }
   return;
 }
 
@@ -126,7 +142,7 @@ int stepper_motor_init(void) {
     return err;
   }
 
-  slider_init_params(&slider_status);
+  slider_init_params(&slider);
   if (!device_is_ready(counter_dev)) {
     LOG_ERR("counter_dev not ready.\n");
     return -ENODEV;
@@ -143,25 +159,33 @@ int stepper_motor_init(void) {
 void slider_process_thread() {
   LOG_MODULE_DECLARE(app);
   int err;
+  uint32_t delay;
+  const uint32_t min_delay = counter_us_to_ticks(counter_dev, MIN_MOTOR_DELAY);
   while (1) {
-    if (!memcmp(slider_status.status, SLIDER_STATUS_RUNNING, 4)) {
-      LOG_INF("slider process run\n");
-      steps = slider_status.steps;
-      alarm_cfg.ticks =
-          counter_us_to_ticks(counter_dev, MAX_MOTOR_SPEED + MIN_MOTOR_SPEED -
-                                               slider_status.speed); // TODO
-      LOG_INF("steps: %d, ticks: %d", steps, alarm_cfg.ticks);
-      err = counter_start(counter_dev);
-      if (err) {
-      } // TODO
-      err =
-          counter_set_channel_alarm(counter_dev, ALARM_CHANNEL_ID, &alarm_cfg);
-      if (err) {
-      } // TODO
-      while (!memcmp(slider_status.status, SLIDER_STATUS_RUNNING, 4)) {
-        k_msleep(1000);
-      }
+    if (memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) {
+      k_msleep(100);
+      continue;
     }
-    k_msleep(1000);
+    gpio_pin_set_dt(&stepper_motor_dir, slider.dir);
+    steps = slider.steps;
+    delay = counter_us_to_ticks(counter_dev, CB_DELAY(slider.speed));
+    delay = delay < min_delay ? min_delay : delay;
+    STEPPER_MOTOR_ENABLE();
+    alarm_cfg.ticks = counter_us_to_ticks(counter_dev, delay);
+    LOG_INF("slider process run");
+    LOG_INF("steps: %d", steps);
+    LOG_INF("cb delay: %d us", delay);
+    LOG_INF("step delay: %d us", delay * 2);
+    LOG_INF("min_delay: %d", min_delay);
+    err = counter_start(counter_dev);
+    if (err) {
+    } // TODO
+    err = counter_set_channel_alarm(counter_dev, ALARM_CHANNEL_ID, &alarm_cfg);
+    if (err) {
+    } // TODO
+    while (!memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) {
+      k_msleep(100);
+    }
+    LOG_INF("slider process done");
   }
 }
