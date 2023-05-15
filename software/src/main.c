@@ -62,6 +62,12 @@ static struct bt_uuid_128 slider_duration_uuid =
     BT_UUID_INIT_128(SLIDER_UUID(0x0012));
 static struct bt_uuid_128 slider_speed_uuid =
     BT_UUID_INIT_128(SLIDER_UUID(0x0013));
+static struct bt_uuid_128 slider_soft_start_uuid =
+    BT_UUID_INIT_128(SLIDER_UUID(0x0014));
+static struct bt_uuid_128 slider_intervals_uuid =
+    BT_UUID_INIT_128(SLIDER_UUID(0x0015));
+static struct bt_uuid_128 slider_int_delay_uuid =
+    BT_UUID_INIT_128(SLIDER_UUID(0x0016));
 
 static const struct bt_data ad[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -121,28 +127,23 @@ static ssize_t read_int_param(struct bt_conn *conn,
 static ssize_t cmd_handler(struct bt_conn *conn,
                            const struct bt_gatt_attr *attr, const void *buf,
                            uint16_t len, uint16_t offset, uint8_t flags) {
-  uint32_t cmd;
+  static char cmd[10];
   if (len > sizeof(cmd)) {
-    LOG_ERR("wrong cmd input!");
+    LOG_ERR("too long cmd input! resize buffer");
     memcpy(slider.status, SLIDER_STATUS_ERROR, 4);
     return len;
   }
-  memcpy(&cmd, buf, len);
+  memcpy(cmd, buf, len);
 
-  LOG_INF("cmd handler cmd %d, len: %d", cmd, len);
-  switch (cmd) {
-  case '1': {
+  LOG_INF("cmd handler cmd: \"%s\"", cmd);
+  if (!memcmp(cmd, "start", len)) {
     memcpy(slider.status, SLIDER_STATUS_RUNNING, 4);
-    break;
+  } else if (!memcmp(cmd, "stop", len)) {
+    slider_stop();
+  } else {
+    LOG_ERR("wrong command \"%s\"", cmd);
   }
-  case '2': {
-    memcpy(slider.status, SLIDER_STATUS_HALTED, 4);
-    break;
-  }
-  default: {
-    break;
-  }
-  }
+  memset(cmd, 0, sizeof(cmd));
   return len;
 }
 
@@ -172,7 +173,18 @@ BT_GATT_SERVICE_DEFINE(
                            DEFAULT_WR_PERMS, read_int_param, write_int_param,
                            &slider.speed),
     BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-
+    BT_GATT_CHARACTERISTIC(&slider_soft_start_uuid.uuid, DEFAULT_WR_PROPS,
+                           DEFAULT_WR_PERMS, read_int_param, write_int_param,
+                           &slider.soft_start),
+    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+    BT_GATT_CHARACTERISTIC(&slider_intervals_uuid.uuid, DEFAULT_WR_PROPS,
+                           DEFAULT_WR_PERMS, read_int_param, write_int_param,
+                           &slider.interval_steps),
+    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+    BT_GATT_CHARACTERISTIC(&slider_int_delay_uuid.uuid, DEFAULT_WR_PROPS,
+                           DEFAULT_WR_PERMS, read_int_param, write_int_param,
+                           &slider.interval_delay),
+    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
     BT_GATT_CHARACTERISTIC(&slider_cmd_uuid.uuid, DEFAULT_WO_PROPS,
                            DEFAULT_WO_PERMS, NULL, cmd_handler, NULL), );
 
@@ -181,6 +193,9 @@ BT_GATT_SERVICE_DEFINE(
 #define NOTIFY_SLIDER_END_POS NOTIFY_SLIDER_START_POS + 3
 #define NOTIFY_SLIDER_DURATION NOTIFY_SLIDER_END_POS + 3
 #define NOTIFY_SLIDER_SPEED NOTIFY_SLIDER_DURATION + 3
+#define NOTIFY_SLIDER_SOFT_START NOTIFY_SLIDER_SPEED + 3
+#define NOTIFY_SLIDER_INTERVALS NOTIFY_SLIDER_SOFT_START + 3
+#define NOTIFY_SLIDER_INTERVAL_DELAY NOTIFY_SLIDER_INTERVALS + 3
 
 uint8_t bt_conn_cnt = 0;
 void bt_notify_differences(const struct bt_gatt_attr *chrc,
@@ -205,24 +220,33 @@ void bt_notify_differences(const struct bt_gatt_attr *chrc,
   LOG_INF("gatt notify successful");
 }
 
-void bt_notify_handler() { // TODO: write to a thread
+void bt_notify_handler() {
   while (1) {
-    static slider_params old_slider_status;
+    static slider_params old_slider;
     bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_STATUS],
-                          &slider.status, &old_slider_status.status,
+                          &slider.status, &old_slider.status,
                           sizeof(slider.status));
     bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_START_POS],
-                          &slider.start_pos, &old_slider_status.start_pos,
+                          &slider.start_pos, &old_slider.start_pos,
                           sizeof(slider.start_pos));
     bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_END_POS],
-                          &slider.end_pos, &old_slider_status.end_pos,
+                          &slider.end_pos, &old_slider.end_pos,
                           sizeof(slider.end_pos));
     bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_DURATION],
-                          &slider.duration, &old_slider_status.duration,
+                          &slider.duration, &old_slider.duration,
                           sizeof(slider.duration));
     bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_SPEED],
-                          &slider.speed, &old_slider_status.speed,
+                          &slider.speed, &old_slider.speed,
                           sizeof(slider.speed));
+    bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_SOFT_START],
+                          &slider.soft_start, &old_slider.soft_start,
+                          sizeof(slider.soft_start));
+    bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_INTERVALS],
+                          &slider.interval_steps, &old_slider.interval_steps,
+                          sizeof(slider.interval_steps));
+    bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_INTERVAL_DELAY],
+                          &slider.interval_delay, &old_slider.interval_delay,
+                          sizeof(slider.interval_delay));
     k_msleep(100);
   }
 }

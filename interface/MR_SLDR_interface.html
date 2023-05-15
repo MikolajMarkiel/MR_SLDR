@@ -1,9 +1,4 @@
 <!DOCTYPE html>
-<!-- Copyright (c) 2023 Mikolaj Markiel -->
-<!-- MIT License -->
-
-<!-- Interface for MR_SLDR device -->
-
 <html>
 <head>
     <meta charset="UTF-8">
@@ -23,6 +18,15 @@
         display: inline-block;
     }
     #writeValueSpeed, #notifyValueSpeed {
+        display: inline-block;
+    }
+    #writeValueSoftStart, #notifyValueSoftStart {
+        display: inline-block;
+    }
+    #writeValueIntervals, #notifyValueIntervals {
+        display: inline-block;
+    }
+    #writeValueIntervalDelay, #notifyValueIntervalDelay {
         display: inline-block;
     }
     #status, #notifyStatus {
@@ -60,6 +64,21 @@
     <input type="text" id="writeValueSpeed">
     <div id="notifyValueSpeed"></div>
     <br><br>
+    <label for="softStart">Soft start:</label>
+    <button id="writeSoftStartButton" disabled>Write</button>
+    <input type="text" id="writeValueSoftStart">
+    <div id="notifyValueSoftStart"></div>
+    <br><br>
+    <label for="intervals">Intervals:</label>
+    <button id="writeIntervalsButton" disabled>Write</button>
+    <input type="text" id="writeValueIntervals">
+    <div id="notifyValueIntervals"></div>
+    <br><br>
+    <label for="intervalDelay">IntervalDelay:</label>
+    <button id="writeIntervalDelayButton" disabled>Write</button>
+    <input type="text" id="writeValueIntervalDelay">
+    <div id="notifyValueIntervalDelay"></div>
+    <br><br>
     
     <label for="status">Status:</label>     <div id="notifyStatus"></div>
     <br><br>
@@ -79,15 +98,18 @@
         
         const serviceUuid = '12340000-1234-5678-1234-56789abcdef0';
         
-        const uuid_status    = '12340001-1234-5678-1234-56789abcdef0';
-        const uuid_command   = '12340002-1234-5678-1234-56789abcdef0';
-        const uuid_start_pos = '12340010-1234-5678-1234-56789abcdef0';
-        const uuid_end_pos   = '12340011-1234-5678-1234-56789abcdef0';
-        const uuid_duration  = '12340012-1234-5678-1234-56789abcdef0';
-	const uuid_speed     = '12340013-1234-5678-1234-56789abcdef0';
+        const uuid_status     = '12340001-1234-5678-1234-56789abcdef0';
+        const uuid_command    = '12340002-1234-5678-1234-56789abcdef0';
+        const uuid_start_pos  = '12340010-1234-5678-1234-56789abcdef0';
+        const uuid_end_pos    = '12340011-1234-5678-1234-56789abcdef0';
+        const uuid_duration   = '12340012-1234-5678-1234-56789abcdef0';
+	const uuid_speed      = '12340013-1234-5678-1234-56789abcdef0';
+	const uuid_soft_start = '12340014-1234-5678-1234-56789abcdef0';
+	const uuid_intervals  = '12340015-1234-5678-1234-56789abcdef0';
+	const uuid_int_delay  = '12340016-1234-5678-1234-56789abcdef0';
 	
         
-        let device, ch_start_pos, ch_end_pos, ch_duration, ch_status, ch_cmd, ch_speed;
+        let device, ch_start_pos, ch_end_pos, ch_duration, ch_status, ch_cmd, ch_speed, ch_soft_start, ch_intervals, ch_int_delay;
 
         // Function to scan for nearby advertising BLE devices
         async function scanForDevices() {
@@ -136,21 +158,31 @@
                 ch_status = await service.getCharacteristic(uuid_status);
                 ch_cmd = await service.getCharacteristic(uuid_command);
                 ch_speed = await service.getCharacteristic(uuid_speed);
-                
+                ch_soft_start = await service.getCharacteristic(uuid_soft_start);
+                ch_intervals = await service.getCharacteristic(uuid_intervals);
+                ch_int_delay = await service.getCharacteristic(uuid_int_delay);
+
 		
                 // Enable the write button for each characteristic
                 document.getElementById('writeStartPosButton').disabled = false;
                 document.getElementById('writeEndPosButton').disabled = false;
                 document.getElementById('writeDurationButton').disabled = false;
                 document.getElementById('writeSpeedButton').disabled = false;
+                document.getElementById('writeSoftStartButton').disabled = false;
+                document.getElementById('writeIntervalsButton').disabled = false;
+                document.getElementById('writeIntervalDelayButton').disabled = false;
                 document.getElementById('startButton').disabled = false;
                 document.getElementById('stopButton').disabled = false;
+                
 
                 // Enable notifications for each characteristic
                 await ch_start_pos.startNotifications();
                 await ch_end_pos.startNotifications();
                 await ch_duration.startNotifications();
                 await ch_speed.startNotifications();
+                await ch_soft_start.startNotifications();
+                await ch_intervals.startNotifications();
+                await ch_int_delay.startNotifications();
                 await ch_status.startNotifications();
                 
                 // Set up event listener for the characteristics
@@ -158,6 +190,9 @@
                 ch_end_pos.addEventListener('characteristicvaluechanged', handleNotification);
                 ch_duration.addEventListener('characteristicvaluechanged', handleNotification);
                 ch_speed.addEventListener('characteristicvaluechanged', handleNotification);
+                ch_soft_start.addEventListener('characteristicvaluechanged', handleNotification);
+                ch_intervals.addEventListener('characteristicvaluechanged', handleNotification);
+                ch_int_delay.addEventListener('characteristicvaluechanged', handleNotification);
                 ch_status.addEventListener('characteristicvaluechanged', handleNotification);
 		
 		readAllValues()
@@ -180,6 +215,12 @@
                 document.getElementById('notifyValueDuration').textContent = decodedValue;
             } else if (event.target.uuid === uuid_speed) {
                 document.getElementById('notifyValueSpeed').textContent = decodedValue;
+            } else if (event.target.uuid === uuid_soft_start) {
+                document.getElementById('notifyValueSoftStart').textContent = decodedValue;
+            } else if (event.target.uuid === uuid_intervals) {
+                document.getElementById('notifyValueIntervals').textContent = decodedValue;
+            } else if (event.target.uuid === uuid_int_delay) {
+                document.getElementById('notifyValueIntervalDelay').textContent = decodedValue;
             } else if (event.target.uuid === uuid_status) {
                 document.getElementById('notifyStatus').textContent = decodedText;
             }
@@ -246,42 +287,39 @@
 	    await readValue(ch_end_pos, document.getElementById('notifyValueEndPos'));
 	    await readValue(ch_duration, document.getElementById('notifyValueDuration'));
     	    await readValue(ch_speed, document.getElementById('notifyValueSpeed'));
+    	    await readValue(ch_soft_start, document.getElementById('notifyValueSoftStart'));
+    	    await readValue(ch_intervals, document.getElementById('notifyValueIntervals'));
+    	    await readValue(ch_int_delay, document.getElementById('notifyValueIntervalDelay'));
     	    //await readValue(ch_status, document.getElementById('notifyStatus'));
 	}
-        // Add event listener to the scan button
         document.getElementById('scanButton').addEventListener('click', scanForDevices);
-
-        // Add event listenerto the connect button
         document.getElementById('connectButton').addEventListener('click', connectToDevice);
-
-        // Add event listener to the write start position button
         document.getElementById('writeStartPosButton').addEventListener('click', function() {
             writeValue(ch_start_pos, document.getElementById('writeValueStartPos'));
         });
-
-        // Add event listener to the write end position button
         document.getElementById('writeEndPosButton').addEventListener('click', function() {
             writeValue(ch_end_pos, document.getElementById('writeValueEndPos'));
         });
-
-        // Add event listener to the write duration button
         document.getElementById('writeDurationButton').addEventListener('click', function() {
             writeValue(ch_duration, document.getElementById('writeValueDuration'));
         });
-   
-        // Add event listener to the write duration button
         document.getElementById('writeSpeedButton').addEventListener('click', function() {
             writeValue(ch_speed, document.getElementById('writeValueSpeed'));
         });
-        
-	// Add event listener to the write duration button
-        document.getElementById('startButton').addEventListener('click', function() {
-            writeCmd(ch_cmd, '1');
+        document.getElementById('writeSoftStartButton').addEventListener('click', function() {
+            writeValue(ch_soft_start, document.getElementById('writeValueSoftStart'));
         });
-        
-        // Add event listener to the write duration button
+        document.getElementById('writeIntervalsButton').addEventListener('click', function() {
+            writeValue(ch_intervals, document.getElementById('writeValueIntervals'));
+        });
+        document.getElementById('writeIntervalDelayButton').addEventListener('click', function() {
+            writeValue(ch_int_delay, document.getElementById('writeValueIntervalDelay'));
+        });
+        document.getElementById('startButton').addEventListener('click', function() {
+            writeCmd(ch_cmd, 'start');
+        });
         document.getElementById('stopButton').addEventListener('click', function() {
-            writeCmd(ch_cmd, '2');
+            writeCmd(ch_cmd, 'stop');
         });
     </script>
 </body>

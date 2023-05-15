@@ -103,8 +103,9 @@ static void count_duration(slider_params *slider) {
 }
 
 static void slider_init_params(slider_params *slider) {
-  //   memcpy(slider->status, SLIDER_STATUS_IDLE, sizeof(SLIDER_STATUS_IDLE));
-  memcpy(slider->status, SLIDER_STATUS_RUNNING, sizeof(SLIDER_STATUS_RUNNING));
+  memcpy(slider->status, SLIDER_STATUS_IDLE, sizeof(SLIDER_STATUS_IDLE));
+  //   memcpy(slider->status, SLIDER_STATUS_RUNNING,
+  //   sizeof(SLIDER_STATUS_RUNNING));
   slider->start_pos = DEFAULT_START_POS;
   slider->end_pos = DEFAULT_END_POS;
   slider->speed = DEFAULT_SPEED;
@@ -201,9 +202,12 @@ static int set_interval_process(stepper_thread_data *data) {
   const uint32_t min_delay = counter_us_to_ticks(counter_dev, MIN_MOTOR_DELAY);
 
   LOG_MODULE_DECLARE(app);
+  if (memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) {
+    return -1;
+  }
   if (slider.speed == 0) {
     LOG_ERR("invalid speed value");
-    return -1;
+    return -2;
   }
   delay_speed = CB_DELAY(slider.speed);
   data->c_delay = delay_speed > min_delay ? delay_speed : min_delay;
@@ -215,7 +219,7 @@ static int set_interval_process(stepper_thread_data *data) {
     delay_soft = 0;
   }
   data->c_delay = delay_speed > delay_soft ? delay_speed : delay_soft;
-  data->max_delay = delay_soft;
+  data->max_delay = data->c_delay;
 
   alarm_cfg.ticks = counter_us_to_ticks(counter_dev, delay_speed);
 
@@ -230,7 +234,16 @@ static int set_interval_process(stepper_thread_data *data) {
   if (err) {
     LOG_ERR("counter set channel alarm failed");
   }
+  //   LOG_INF("interval %d start", data->c_interval);
   return 0;
+}
+
+void slider_stop() {
+  LOG_MODULE_DECLARE(app);
+  LOG_INF("process stopped");
+  memcpy(slider.status, SLIDER_STATUS_HALTED, 4);
+  timer_disable(counter_dev);
+  STEPPER_MOTOR_DISABLE();
 }
 
 void slider_process_thread() {
@@ -244,11 +257,12 @@ void slider_process_thread() {
       k_msleep(100);
       continue;
     }
+    count_steps(&slider);
+    count_duration(&slider);
     steps_per_interval = slider.steps / slider.interval_steps;
     for (data.c_interval = 1; data.c_interval <= slider.interval_steps;
          data.c_interval++) {
       data.c_step = steps_per_interval;
-      LOG_INF("interval %d start", data.c_interval);
       set_interval_process(&data);
       while (timer_status) {
         k_msleep(1);
