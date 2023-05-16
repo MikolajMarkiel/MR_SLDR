@@ -39,14 +39,39 @@ SOFTWARE.
 
 LOG_MODULE_REGISTER(app);
 
-static const struct gpio_dt_spec led =
-    GPIO_DT_SPEC_GET(DT_NODELABEL(blinking_led), gpios);
+#define DEFAULT_WR_PROPS                                                       \
+  BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY |               \
+      BT_GATT_CHRC_AUTH
+
+#define DEFAULT_WR_PERMS BT_GATT_PERM_READ | BT_GATT_PERM_WRITE
+
+#define DEFAULT_RO_PROPS                                                       \
+  BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_AUTH
+
+#define DEFAULT_RO_PERMS BT_GATT_PERM_READ
+
+#define DEFAULT_WO_PROPS BT_GATT_CHRC_WRITE | BT_GATT_CHRC_AUTH
+
+#define DEFAULT_WO_PERMS BT_GATT_PERM_WRITE
+
+#define SLIDER_GATT_1 0x88A30000
+#define SLIDER_GATT_2 0x6CFA
+#define SLIDER_GATT_3 0x440D
+#define SLIDER_GATT_4 0x8DDD
+#define SLIDER_GATT_5 0x4A2D48A4812F
+#define SLIDER_SERVICE_MASK 0xFFFF0000
 
 #define SLIDER_UUID(num)                                                       \
-  BT_UUID_128_ENCODE(0x12340000 | num, 0x1234, 0x5678, 0x1234,                 \
-                     0x56789abcdef0) // TODO change to something more random
+  BT_UUID_128_ENCODE((SLIDER_GATT_1 & SLIDER_SERVICE_MASK) | num,              \
+                     SLIDER_GATT_2, SLIDER_GATT_3, SLIDER_GATT_4,              \
+                     SLIDER_GATT_5)
 
 #define BT_UUID_SLIDER_SERVICE SLIDER_UUID(0x0000)
+
+uint8_t bt_conn_cnt = 0;
+
+static const struct gpio_dt_spec led =
+    GPIO_DT_SPEC_GET(DT_NODELABEL(blinking_led), gpios);
 
 static struct bt_uuid_128 slider_service_uuid =
     BT_UUID_INIT_128(SLIDER_UUID(0x0000));
@@ -80,18 +105,6 @@ static const struct bt_data sd[] = {
     BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_SLIDER_SERVICE),
     BT_DATA_BYTES(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME),
 };
-
-#define DEFAULT_WR_PROPS                                                       \
-  BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY |               \
-      BT_GATT_CHRC_AUTH
-#define DEFAULT_WR_PERMS BT_GATT_PERM_READ | BT_GATT_PERM_WRITE
-
-#define DEFAULT_RO_PROPS                                                       \
-  BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_AUTH
-#define DEFAULT_RO_PERMS BT_GATT_PERM_READ
-
-#define DEFAULT_WO_PROPS BT_GATT_CHRC_WRITE | BT_GATT_CHRC_AUTH
-#define DEFAULT_WO_PERMS BT_GATT_PERM_WRITE
 
 static ssize_t write_int_param(struct bt_conn *conn,
                                const struct bt_gatt_attr *attr, const void *buf,
@@ -197,9 +210,9 @@ BT_GATT_SERVICE_DEFINE(
 #define NOTIFY_SLIDER_INTERVALS NOTIFY_SLIDER_SOFT_START + 3
 #define NOTIFY_SLIDER_INTERVAL_DELAY NOTIFY_SLIDER_INTERVALS + 3
 
-uint8_t bt_conn_cnt = 0;
-void bt_notify_differences(const struct bt_gatt_attr *chrc,
-                           const void *current_msg, void *old_msg, size_t n) {
+static void bt_notify_differences(const struct bt_gatt_attr *chrc,
+                                  const void *current_msg, void *old_msg,
+                                  size_t n) {
   static int err;
   static uint8_t old_bt_conn_cnt = 0;
   if (!bt_conn_cnt) {
@@ -217,10 +230,9 @@ void bt_notify_differences(const struct bt_gatt_attr *chrc,
     LOG_ERR("gatt notify failed, reason: %d", err);
     return;
   }
-  LOG_INF("gatt notify successful");
 }
 
-void bt_notify_handler() {
+static void bt_notify_handler() {
   while (1) {
     static slider_params old_slider;
     bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_STATUS],
@@ -250,8 +262,6 @@ void bt_notify_handler() {
     k_msleep(100);
   }
 }
-
-K_THREAD_DEFINE(bt_notify, 1024, bt_notify_handler, NULL, NULL, NULL, 7, 0, 0);
 
 static void connected(struct bt_conn *conn, uint8_t err) {
   if (err) {
@@ -297,10 +307,7 @@ static struct bt_conn_auth_cb auth_cb_display = {
     .cancel = auth_cancel,
 };
 
-K_THREAD_DEFINE(slider_process_id, 1024, slider_process_thread, NULL, NULL,
-                NULL, 3, 0, 0);
-
-int led_test_init() {
+static int led_test_init() {
   int err;
   if (!gpio_is_ready_dt(&led)) {
     LOG_ERR("led gpio isn't ready");
@@ -314,17 +321,21 @@ int led_test_init() {
   return 0;
 }
 
+K_THREAD_DEFINE(bt_notify, 1024, bt_notify_handler, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(slider_process_id, 1024, slider_process_thread, NULL, NULL,
+                NULL, 3, 0, 0);
+
 void main(void) {
   int err;
-  LOG_INF("im here");
   err = stepper_motor_init();
   if (err) {
+    LOG_ERR("Stepper motor init failed (err %d)", err);
     return;
   }
-  LOG_INF("done");
 
   err = led_test_init();
   if (err) {
+    LOG_ERR("Led test init failed (err %d)", err);
     return;
   }
 
@@ -346,7 +357,7 @@ void main(void) {
     return;
   }
 
-  LOG_INF("Advertising started succesfully");
+  LOG_INF("Application started succesfully");
 
   while (1) {
     gpio_pin_toggle_dt(&led);

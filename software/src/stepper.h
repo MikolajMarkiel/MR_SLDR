@@ -40,12 +40,7 @@ extern "C" {
 #define SLIDER_STATUS_ERROR "Err"
 
 #define STEPS_FACTOR 100 // <x> steps for 1 mm move
-// #define MAX_MOTOR_SPEED 50 // min duration of signal for motor driver is 50us
-#define MIN_MOTOR_SPEED 5000
 #define MIN_MOTOR_DELAY 50
-// TODO: count precise MAX_MOTOR_SPEED
-
-#define ALARM_CHANNEL_ID 0
 
 #define DEFAULT_START_POS 0
 #define DEFAULT_END_POS 50
@@ -70,11 +65,9 @@ typedef struct slider_params {
 
 extern slider_params slider;
 
-void slider_stop();
-
 int stepper_motor_init(void);
 
-// void slider_process(slider_params *slider);
+void slider_stop();
 
 void slider_process_thread();
 

@@ -2,6 +2,6 @@
 #ifndef __VERSION_HEADER__
 #define __VERSION_HEADER__
 
-#define soft_ver "0.6"
+#define soft_ver "0.7"
 
 #endif
