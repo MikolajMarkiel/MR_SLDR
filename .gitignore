@@ -4,3 +4,4 @@ build/
 flash_monitor_esp32.sh
 *.swp
 hardware/MR_SLDR/MR_SLDR-backups/
+docs/

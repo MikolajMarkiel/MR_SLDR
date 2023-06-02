@@ -361,7 +361,7 @@ void main(void) {
 
   while (1) {
     gpio_pin_toggle_dt(&led);
-    k_msleep(1000);
+    k_msleep(1);
     if (!memcmp(slider.status, SLIDER_STATUS_HALTED, 4)) {
       memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
     }
