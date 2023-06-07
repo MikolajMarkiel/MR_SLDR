@@ -1,4 +1,5 @@
 
+
 /*
 Copyright (c) 2023 Mikolaj Markiel
 
@@ -21,62 +22,45 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "rangefinder.h"
-#include "slider_bt.h"
-#include "stepper.h"
-// #include <zephyr/device.h>
-// #include <zephyr/drivers/gpio.h>
+#include <stdio.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
-#include <zephyr/logging/log.h>
 
-// #include <stdint.h>
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <string.h>
+// #define VL53L0X_SAMPLES 1
 
-LOG_MODULE_REGISTER(app);
+const struct device *const vl53l0x_dev = DEVICE_DT_GET_ONE(st_vl53l0x);
+struct sensor_value rangefinder_value;
 
-K_THREAD_DEFINE(bt_notify, 1024, bt_notify_handler, NULL, NULL, NULL, 7, 0, 0);
-K_THREAD_DEFINE(slider_process_id, 1024, slider_process_thread, NULL, NULL,
-                NULL, 3, 0, 0);
+int rangefinder_init(void) { return !device_is_ready(vl53l0x_dev); }
 
-int app_init();
-
-int main(void) {
+int rangefinder_meas() {
   int err;
-
-  err = app_init();
+  err = sensor_sample_fetch_chan(vl53l0x_dev, SENSOR_CHAN_DISTANCE);
   if (err) {
-    return err;
+    return -1;
   }
-
-  while (1) {
-    rangefinder_meas();
-    k_msleep(500);
-    if (!memcmp(slider.status, SLIDER_STATUS_HALTED, 4)) {
-      memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
-    }
-  }
-  return 0;
-}
-
-int app_init() {
-  int err;
-  err = stepper_motor_init();
+  err =
+      sensor_channel_get(vl53l0x_dev, SENSOR_CHAN_DISTANCE, &rangefinder_value);
   if (err) {
-    LOG_ERR("Stepper motor init failed (err %d)", err);
-    return 1;
+    return -2;
   }
-  err = rangefinder_init();
-  if (err) {
-    LOG_ERR("Distance meter init failed (err %d)", err);
-    return 2;
-  }
-  err = slider_bt_init();
-  if (err) {
-    LOG_ERR("Bluetooth module failed (err %d)", err);
-    return 3;
-  }
-  LOG_INF("Application started succesfully");
+  //   int val_mm = 0;
+  //   for (int i = 0; i < VL53L0X_SAMPLES; i++) {
+  //     err = sensor_sample_fetch_chan(vl53l0x_dev, SENSOR_CHAN_DISTANCE);
+  //     if (err) {
+  //       return -1;
+  //     }
+  //     err = sensor_channel_get(vl53l0x_dev, SENSOR_CHAN_DISTANCE,
+  //                              &rangefinder_value);
+  //     if (err) {
+  //       return -2;
+  //     }
+  //     val_mm = rangefinder_value.val1 * 1000;
+  //     val_mm += (rangefinder_value.val2 / 1000);
+  //   }
+  //   val_mm /= VL53L0X_SAMPLES;
+  //   printf("val_mm = %d\n", val_mm);
+  //   return val_mm;
   return 0;
 }

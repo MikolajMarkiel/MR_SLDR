@@ -7,4 +7,6 @@ project(blinky)
 target_sources(app PRIVATE 
   src/main.c
   src/stepper.c
+  src/rangefinder.c
+  src/slider_bt.c
 )

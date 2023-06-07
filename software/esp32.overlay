@@ -1,9 +1,39 @@
 / {
 	leds {
 		compatible = "gpio-leds";
-		blinking_led: blinking_led {
-			gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
-		};
+/*     camera_control1: camera_control1 { */
+/*       gpios = <&gpio1 35 GPIO_ACTIVE_LOW>; */
+/*     }; */
+/*     camera_control2: camera_control2 { */
+/*       gpios = <&gpio1 35 GPIO_ACTIVE_LOW>; */
+/*     }; */
+/*     led1: led1 { */
+/*       gpios = <&gpio1 35 GPIO_ACTIVE_HIGH>; */
+/*     }; */
+/*     led2: led2 { */
+/*       gpios = <&gpio1 34 GPIO_ACTIVE_HIGH>; */
+/*     }; */
+/*     led3: led3 { */
+/*       gpios = <&gpio1 39 GPIO_ACTIVE_HIGH>; */
+/*     }; */
+/*     led4: led4 { */
+/*       gpios = <&gpio1 36 GPIO_ACTIVE_HIGH>; */
+/*     }; */
+/*     stepper_motor_step: stepper_motor_step { */
+/*       gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>; */
+/*     }; */
+/*     stepper_motor_dir: stepper_motor_dir { */
+/*       gpios = <&gpio0 25 GPIO_ACTIVE_HIGH>; */
+/*     }; */
+/*     stepper_motor_en: stepper_motor_en { */
+/*       gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; */
+/*     }; */
+/*     stepper_motor_reset: stepper_motor_reset { */
+/*       gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; */
+/*     }; */
+/*     stepper_motor_fault: stepper_motor_fault { */
+/*       gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; */
+/*     }; */
 		stepper_motor_step: stepper_motor_step {
 			gpios = <&gpio0 14 GPIO_ACTIVE_HIGH>;
 		};
@@ -19,3 +49,57 @@
   status = "okay";
   prescaler = <80>;
 };
+&i2c0 {
+ vl53l0x_sen: vl53l0x@29{
+    compatible = "st,vl53l0x"; 
+    reg = < 0x29 >;
+    status = "okay";
+    friendly-name = "rangefinder";
+    xshut-gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
+  };
+};
+
+/* GPIO distribution: */
+/* gpio0: */
+/*   - 00 - Boot */
+/*   - 01 - UART0.TX */
+/*   - 02 - U.BATT */
+/*   - 03 - UART0.RX */
+/*   - 04 - !MOTOR.EN */
+/*   - 05 - VSPI.CS */
+/*   - 06 -  */
+/*   - 07 -  */
+/*   - 08 -  */
+/*   - 09 -  */
+/*   - 10 -  */
+/*   - 11 -  */
+/*   - 12 - JTAG.TDI */
+/*   - 13 - JTAG.TCK */
+/*   - 14 - JTAG.TMS */
+/*   - 15 - JTAG.TDO */
+/*   - 16 - DISTANCE_METER_EN */
+/*   - 17 - !MOTOR.FAULT */
+/*   - 18 - VSPI.SCK */
+/*   - 19 - VSPI.SDI */
+/*   - 20 -  */
+/*   - 21 - I2C0.SDA */
+/*   - 22 - I2C0.SCL */
+/*   - 23 - VSPI.SDO */
+/*   - 24 -  */
+/*   - 25 - MOTOR.DIR */
+/*   - 26 - MOTOR.STEP */
+/*   - 27 - !MOTOR.RESET */
+/*   - 28 -  */
+/*   - 29 -  */
+/*   - 30 -  */
+/*   - 31 -  */
+/* gpio1: */
+/*   - 32 - !CC1.EN */
+/*   - 33 - !CC2.EN */
+/*   - 34 - LED2.EN */
+/*   - 35 - LED1.EN */
+/*   - 36 - LED4.EN */
+/*   - 37 -  */
+/*   - 38 -  */
+/*   - 39 - LED3.EN */
+

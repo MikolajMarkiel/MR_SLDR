@@ -38,6 +38,8 @@ SOFTWARE.
 #define US_IN_ONE_SEC 1000000
 #define CB_DELAY(speed) US_IN_ONE_SEC / speed / CB_FOR_ONE_STEP
 
+LOG_MODULE_REGISTER(stepper);
+
 typedef struct {
   uint32_t c_step;
   uint32_t c_delay;
@@ -120,7 +122,7 @@ static void slider_init_params(slider_params *slider) {
 }
 
 static int stepper_gpio_configure(const struct gpio_dt_spec *pin, char *name) {
-  LOG_MODULE_DECLARE(app);
+  //   LOG_MODULE_DECLARE(app);
   int err;
   if (!gpio_is_ready_dt(pin)) {
     LOG_ERR("%s gpio isn't ready", name);
@@ -167,7 +169,7 @@ static int set_interval_process(stepper_thread_data *data) {
   uint32_t delay_soft;
   const uint32_t min_delay = counter_us_to_ticks(counter_dev, MIN_MOTOR_DELAY);
 
-  LOG_MODULE_DECLARE(app);
+  //   LOG_MODULE_DECLARE(app);
   if (memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) {
     return -1;
   }
@@ -206,7 +208,7 @@ static int set_interval_process(stepper_thread_data *data) {
 
 int stepper_motor_init(void) {
   int err;
-  LOG_MODULE_DECLARE(app);
+  //   LOG_MODULE_DECLARE(app);
   err = stepper_gpio_configure(&stepper_motor_step, "stepper_motor_step");
   if (err) {
     return err;
@@ -238,7 +240,7 @@ int stepper_motor_init(void) {
 }
 
 void slider_stop() {
-  LOG_MODULE_DECLARE(app);
+  //   LOG_MODULE_DECLARE(app);
   LOG_INF("process stopped");
   memcpy(slider.status, SLIDER_STATUS_HALTED, 4);
   timer_disable(counter_dev);
@@ -246,7 +248,7 @@ void slider_stop() {
 }
 
 void slider_process_thread() {
-  LOG_MODULE_DECLARE(app);
+  //   LOG_MODULE_DECLARE(app);
   int err;
   static uint32_t steps_per_interval;
   static stepper_thread_data data;
