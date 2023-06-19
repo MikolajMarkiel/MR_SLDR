@@ -24,21 +24,13 @@ SOFTWARE.
 #include "rangefinder.h"
 #include "slider_bt.h"
 #include "stepper.h"
-// #include <zephyr/device.h>
-// #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-
-// #include <stdint.h>
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <string.h>
 
 LOG_MODULE_REGISTER(app);
 
 K_THREAD_DEFINE(bt_notify, 1024, bt_notify_handler, NULL, NULL, NULL, 7, 0, 0);
-K_THREAD_DEFINE(slider_process_id, 1024, slider_process_thread, NULL, NULL,
-                NULL, 3, 0, 0);
+K_THREAD_DEFINE(slider_id, 2048, slider_thread, NULL, NULL, NULL, 3, 0, 0);
 
 int app_init();
 
@@ -51,11 +43,8 @@ int main(void) {
   }
 
   while (1) {
-    rangefinder_meas();
+    //     rangefinder_meas();
     k_msleep(500);
-    if (!memcmp(slider.status, SLIDER_STATUS_HALTED, 4)) {
-      memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
-    }
   }
   return 0;
 }

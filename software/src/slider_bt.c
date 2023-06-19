@@ -98,23 +98,30 @@ static const struct bt_data sd[] = {
     BT_DATA_BYTES(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME),
 };
 
+int buf_to_int(const void *buf, uint16_t len, uint32_t *val) {
+  const char *buf_ptr = buf;
+  uint32_t temp_val;
+  char temp_str_1[11];
+  char temp_str_2[11];
+  memcpy(temp_str_1, buf, len);
+  temp_str_1[len] = 0;
+  temp_val = atoi(temp_str_1);
+  sprintf(temp_str_2, "%d", temp_val);
+  if (strcmp(temp_str_1, temp_str_2)) {
+    LOG_ERR("wrong int value, val_1: %s, val_2: %s", temp_str_1, temp_str_2);
+    return -1;
+  }
+  memcpy(val, &temp_val, sizeof(*val));
+  return 0;
+}
+
 static ssize_t write_int_param(struct bt_conn *conn,
                                const struct bt_gatt_attr *attr, const void *buf,
                                uint16_t len, uint16_t offset, uint8_t flags) {
   uint32_t *param = attr->user_data;
-  static uint32_t temp;
-  char value_1[10]; // TODO - change magical 10 to max BCD signs of uint32_t
-                    // (4294967296);
-  char value_2[10];
-  memcpy(value_1, buf, len);
-  value_1[len] = 0;
-  temp = atoi(value_1);
-  sprintf(value_2, "%d", temp);
-  if (strcmp(value_1, value_2)) {
-    LOG_ERR("wrong int value, val_1: %s, val_2: %s", value_1, value_2);
+  if (buf_to_int(buf, len, param)) {
     return BT_GATT_ERR(BT_ATT_ERR_VALUE_NOT_ALLOWED);
   }
-  memcpy(param, &temp, sizeof(*param));
   LOG_INF("write value, int: %d", *param);
   return len;
 }
@@ -145,6 +152,8 @@ static ssize_t cmd_handler(struct bt_conn *conn,
     memcpy(slider.status, SLIDER_STATUS_RUNNING, 4);
   } else if (!memcmp(cmd, "stop", len)) {
     slider_stop();
+    // slider_calib();
+
   } else {
     LOG_ERR("wrong command \"%s\"", cmd);
   }
@@ -202,18 +211,15 @@ BT_GATT_SERVICE_DEFINE(
 #define NOTIFY_SLIDER_INTERVALS NOTIFY_SLIDER_SOFT_START + 3
 #define NOTIFY_SLIDER_INTERVAL_DELAY NOTIFY_SLIDER_INTERVALS + 3
 
-static void bt_notify_differences(const struct bt_gatt_attr *chrc,
-                                  const void *current_msg, void *old_msg,
-                                  size_t n) {
+static void bt_notify_diff_str(const struct bt_gatt_attr *chrc,
+                               const void *current_msg, void *old_msg,
+                               size_t n) {
   static int err;
-  static uint8_t old_bt_conn_cnt = 0;
-  if (!bt_conn_cnt) {
-    return;
-  }
   if (!memcmp(old_msg, current_msg, n)) {
     return;
   }
   memcpy(old_msg, current_msg, n);
+  // err = bt_gatt_notify(NULL, chrc, old_msg, n);
   err = bt_gatt_notify(NULL, chrc, old_msg, sizeof(old_msg));
   err = err == -ENOTCONN ? 0 : err;
   // TODO exchange if server has opportunity to know that client notification is
@@ -222,35 +228,65 @@ static void bt_notify_differences(const struct bt_gatt_attr *chrc,
     LOG_ERR("gatt notify failed, reason: %d", err);
     return;
   }
+  LOG_INF("notify: %s", (char*)old_msg);
+}
+
+static void bt_notify_diff_int(const struct bt_gatt_attr *chrc,
+                               const void *current_msg, void *old_msg,
+                               size_t n) {
+  static int err;
+  static char buf[11];
+  static uint32_t *ptr;
+  if (!memcmp(old_msg, current_msg, n)) {
+    return;
+  }
+  memcpy(old_msg, current_msg, n);
+  ptr = (uint32_t *)current_msg;
+  sprintf(buf, "%04u", *ptr);
+  err = bt_gatt_notify(NULL, chrc, buf, sizeof(old_msg));
+  err = err == -ENOTCONN ? 0 : err;
+  // TODO exchange if server has opportunity to know that client notification is
+  // enabled
+  if (err) {
+    LOG_ERR("gatt notify failed, reason: %d", err);
+    return;
+  }
+  LOG_INF("notify: %u", *ptr);
 }
 
 void bt_notify_handler() {
+  static slider_params old_slider;
+  old_slider = slider;
+  static uint8_t old_bt_conn_cnt = 0;
   while (1) {
-    static slider_params old_slider;
-    bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_STATUS],
-                          &slider.status, &old_slider.status,
-                          sizeof(slider.status));
-    bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_START_POS],
-                          &slider.start_pos, &old_slider.start_pos,
-                          sizeof(slider.start_pos));
-    bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_END_POS],
-                          &slider.end_pos, &old_slider.end_pos,
-                          sizeof(slider.end_pos));
-    bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_DURATION],
-                          &slider.duration, &old_slider.duration,
-                          sizeof(slider.duration));
-    bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_SPEED],
-                          &slider.speed, &old_slider.speed,
-                          sizeof(slider.speed));
-    bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_SOFT_START],
-                          &slider.soft_start, &old_slider.soft_start,
-                          sizeof(slider.soft_start));
-    bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_INTERVALS],
-                          &slider.interval_steps, &old_slider.interval_steps,
-                          sizeof(slider.interval_steps));
-    bt_notify_differences(&slider_service.attrs[NOTIFY_SLIDER_INTERVAL_DELAY],
-                          &slider.interval_delay, &old_slider.interval_delay,
-                          sizeof(slider.interval_delay));
+    // if (bt_conn_cnt > old_bt_conn_cnt) { // force to notify all
+    //   memset(&old_slider, 0xFF, sizeof(old_slider));
+    //   LOG_INF("reset old_slider");
+    // }
+    old_bt_conn_cnt = bt_conn_cnt;
+    bt_notify_diff_str(&slider_service.attrs[NOTIFY_SLIDER_STATUS],
+                       &slider.status, &old_slider.status,
+                       sizeof(slider.status));
+    bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_START_POS],
+                       &slider.start_pos, &old_slider.start_pos,
+                       sizeof(slider.start_pos));
+    bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_END_POS],
+                       &slider.end_pos, &old_slider.end_pos,
+                       sizeof(slider.end_pos));
+    bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_DURATION],
+                       &slider.duration, &old_slider.duration,
+                       sizeof(slider.duration));
+    bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_SPEED],
+                       &slider.speed, &old_slider.speed, sizeof(slider.speed));
+    bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_SOFT_START],
+                       &slider.soft_start, &old_slider.soft_start,
+                       sizeof(slider.soft_start));
+    bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_INTERVALS],
+                       &slider.interval_steps, &old_slider.interval_steps,
+                       sizeof(slider.interval_steps));
+    bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_INTERVAL_DELAY],
+                       &slider.interval_delay, &old_slider.interval_delay,
+                       sizeof(slider.interval_delay));
     k_msleep(100);
   }
 }
