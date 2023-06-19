@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>BLE slider</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/range-slider.css" />
+</head>
+
+<body>
+  <section class="ftco-section">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-10 col-md-12">
+          <div class="wrapper">
+            <div class="row no-gutters">
+              <div class="col-md-5 d-flex align-items-stretch">
+                <div class="info-wrap bg-primary w-100 p-lg-5 p-4">
+                  <button id="scanButton">Scan for Devices</button>
+                  <button id="connectButton" disabled>Connect</button>
+                  <label for="status">Status:</label>
+                  <div id="notifyStatus"></div>
+                  <br /><br />
+                  <label for="cmdStart"></label>
+                  <button id="startButton" disabled>Start!</button>
+
+                  <label for="cmdStop"></label>
+                  <button id="stopButton" disabled>Stop!</button>
+
+                </div>
+              </div>
+              <div class="col-md-7 d-flex align-items-stretch">
+                <div class="contact-wrap w-100 p-md-5 p-4">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <input type="text" class="form-control" name="name" id="name" placeholder="Name" />
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <input type="text" class="form-control" name="name" id="name" placeholder="Name" />
+                      </div>
+                    </div>
+                    <div class="col-md-12">
+                      <div class="form-group">
+                        <div class="range-slider second" data-ticks-position="top" style="" id="#position">
+                          <input type="range" max="2000" value="0" id="#position_start"
+                            oninput="this.parentNode.style.setProperty('--value-a',this.value); 
+                                       this.parentNode.style.setProperty('--text-value-a', JSON.stringify(this.value))" />
+                          <output></output>
+                          <input type="range" max="2000" value="400" id="#position_end"
+                            oninput="this.parentNode.style.setProperty('--value-b',this.value); 
+                                       this.parentNode.style.setProperty('--text-value-b', JSON.stringify(this.value))" />
+                          <output></output>
+                          <div class="range-slider__progress"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-12">
+                      <div class="form-group">
+                        <div class="range-slider second" data-ticks-position="top" style="" id="#speed">
+                          <input type="range" max="2000" value="0" id="#speed_low"
+                            oninput="this.parentNode.style.setProperty('--value-a',this.value); 
+                                       this.parentNode.style.setProperty('--text-value-a', JSON.stringify(this.value))" />
+                          <output></output>
+                          <input type="range" max="2000" value="400" id="#speed_high"
+                            oninput="this.parentNode.style.setProperty('--value-b',this.value); 
+                                       this.parentNode.style.setProperty('--text-value-b', JSON.stringify(this.value))" />
+                          <output></output>
+                          <div class="range-slider__progress"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-12">
+                      <div class="form-group">
+                        <div class="range-slider" style='' id="#interval_num">
+                          <input type="range" min="0" max="100" step="5" value="75" id="#interval_num_val"
+                            oninput="this.parentNode.style.setProperty('--value',this.value); this.parentNode.style.setProperty('--text-value', JSON.stringify(this.value))">
+                          <output></output>
+                          <div class='range-slider__progress'></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-12">
+                      <div class="form-group">
+                        <div class="range-slider" style='' id="#interval_delay">
+                          <input type="range" min="0" max="100" step="5" value="75" id="#interval_delay_val"
+                            oninput="this.parentNode.style.setProperty('--value',this.value); this.parentNode.style.setProperty('--text-value', JSON.stringify(this.value))">
+                          <output></output>
+                          <div class='range-slider__progress'></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+  </section>
+  <script src="js/web_bluetooth.js"></script>
+  <script src="js/jquery.min.js"></script>
+  <script src="js/jquery.validate.min.js"></script>
+  <script src="js/main.js"></script>
+</body>
+
+</html>
