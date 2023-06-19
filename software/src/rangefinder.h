@@ -36,6 +36,8 @@ int rangefinder_init(void);
 
 int rangefinder_meas();
 
+int distance_to_cm(struct sensor_value *val);
+
 #ifdef __cplusplus
 }
 #endif

@@ -64,3 +64,7 @@ int rangefinder_meas() {
   //   return val_mm;
   return 0;
 }
+
+int distance_to_cm(struct sensor_value *val) {
+  return val->val1 * 100 + val->val2 / 10000;
+}

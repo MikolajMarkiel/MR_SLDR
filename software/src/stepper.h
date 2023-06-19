@@ -37,7 +37,8 @@ extern "C" {
 #define SLIDER_STATUS_IDLE "Idle"
 #define SLIDER_STATUS_RUNNING "Runn"
 #define SLIDER_STATUS_HALTED "Halt"
-#define SLIDER_STATUS_ERROR "Err"
+#define SLIDER_STATUS_ERROR "Erro"
+#define SLIDER_STATUS_CALIB "Cali"
 
 #define STEPS_FACTOR 100 // <x> steps for 1 mm move
 #define MIN_MOTOR_DELAY 50
@@ -68,8 +69,8 @@ extern slider_params slider;
 int stepper_motor_init(void);
 
 void slider_stop();
-
-void slider_process_thread();
+int slider_calib();
+void slider_thread();
 
 #ifdef __cplusplus
 }

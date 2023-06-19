@@ -21,6 +21,7 @@ SOFTWARE.
 */
 
 #include "stepper.h"
+#include "rangefinder.h"
 #include <string.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/counter.h>
@@ -37,6 +38,10 @@ SOFTWARE.
 #define CB_FOR_ONE_STEP 2
 #define US_IN_ONE_SEC 1000000
 #define CB_DELAY(speed) US_IN_ONE_SEC / speed / CB_FOR_ONE_STEP
+
+#define CALIB_MAX_STEPS 0xFFFFFFFF
+#define CALIB_SLIDER_SPEED 500
+#define CALIB_STEPS_DELAY CB_DELAY(CALIB_SLIDER_SPEED)
 
 LOG_MODULE_REGISTER(stepper);
 
@@ -109,7 +114,8 @@ static void count_duration(slider_params *slider) {
 }
 
 static void slider_init_params(slider_params *slider) {
-  memcpy(slider->status, SLIDER_STATUS_IDLE, sizeof(SLIDER_STATUS_IDLE));
+    memcpy(slider->status, SLIDER_STATUS_IDLE, sizeof(SLIDER_STATUS_IDLE));
+  // memcpy(slider->status, SLIDER_STATUS_CALIB, sizeof(SLIDER_STATUS_CALIB));
   slider->start_pos = DEFAULT_START_POS;
   slider->end_pos = DEFAULT_END_POS;
   slider->speed = DEFAULT_SPEED;
@@ -122,7 +128,6 @@ static void slider_init_params(slider_params *slider) {
 }
 
 static int stepper_gpio_configure(const struct gpio_dt_spec *pin, char *name) {
-  //   LOG_MODULE_DECLARE(app);
   int err;
   if (!gpio_is_ready_dt(pin)) {
     LOG_ERR("%s gpio isn't ready", name);
@@ -142,9 +147,7 @@ static void counter_callback(const struct device *counter_dev, uint8_t chan_id,
   stepper_thread_data *data = user_data;
 
   pin_state ^= 1;
-  if (!pin_state) {
-    data->c_step--;
-  }
+  data->c_step -= (pin_state == 0) ? 1 : 0;
   gpio_pin_set_dt(&stepper_motor_step, pin_state);
   if (data->c_step == 0) {
     timer_disable(counter_dev);
@@ -169,10 +172,9 @@ static int set_interval_process(stepper_thread_data *data) {
   uint32_t delay_soft;
   const uint32_t min_delay = counter_us_to_ticks(counter_dev, MIN_MOTOR_DELAY);
 
-  //   LOG_MODULE_DECLARE(app);
-  if (memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) {
-    return -1;
-  }
+  //   if (memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) {
+  //     return -1;
+  //   }
   if (slider.speed == 0) {
     LOG_ERR("invalid speed value");
     return -2;
@@ -202,13 +204,11 @@ static int set_interval_process(stepper_thread_data *data) {
   if (err) {
     LOG_ERR("counter set channel alarm failed");
   }
-  //   LOG_INF("interval %d start", data->c_interval);
   return 0;
 }
 
 int stepper_motor_init(void) {
   int err;
-  //   LOG_MODULE_DECLARE(app);
   err = stepper_gpio_configure(&stepper_motor_step, "stepper_motor_step");
   if (err) {
     return err;
@@ -240,36 +240,101 @@ int stepper_motor_init(void) {
 }
 
 void slider_stop() {
-  //   LOG_MODULE_DECLARE(app);
   LOG_INF("process stopped");
   memcpy(slider.status, SLIDER_STATUS_HALTED, 4);
   timer_disable(counter_dev);
   STEPPER_MOTOR_DISABLE();
 }
 
-void slider_process_thread() {
-  //   LOG_MODULE_DECLARE(app);
+int slider_calib() {
   int err;
-  static uint32_t steps_per_interval;
-  static stepper_thread_data data;
+  stepper_thread_data data = {.c_delay = CALIB_STEPS_DELAY,
+                              .c_step = CALIB_MAX_STEPS,
+                              .c_interval = 1,
+                              .max_delay = CALIB_STEPS_DELAY,
+                              .min_delay = CALIB_STEPS_DELAY};
   alarm_cfg.user_data = &data;
-  while (1) {
-    if (memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) {
-      k_msleep(100);
-      continue;
-    }
-    count_steps(&slider);
-    count_duration(&slider);
-    steps_per_interval = slider.steps / slider.interval_steps;
-    for (data.c_interval = 1; data.c_interval <= slider.interval_steps;
-         data.c_interval++) {
-      data.c_step = steps_per_interval;
-      set_interval_process(&data);
-      while (timer_status) {
-        k_msleep(1);
-      }
-      k_msleep(slider.interval_delay);
-    }
+  uint32_t start_pos;
+  uint32_t end_pos;
+  uint32_t steps_per_cm;
+
+  uint32_t old_pos;
+  uint32_t curr_pos;
+  uint32_t temp;
+
+  err = rangefinder_meas();
+  if (err) {
     memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
+    return err;
+  }
+  start_pos = old_pos = curr_pos = distance_to_cm(&rangefinder_value);
+
+  set_interval_process(&data);
+  while (timer_status) {
+    curr_pos = distance_to_cm(&rangefinder_value);
+    if (curr_pos > old_pos) {
+      steps_per_cm = (CALIB_MAX_STEPS - data.c_step) / (curr_pos - start_pos);
+      old_pos = curr_pos;
+    }
+    if ((curr_pos - start_pos >= 10) &&
+        ((CALIB_MAX_STEPS - data.c_step) >
+         steps_per_cm * (1 + curr_pos - start_pos))) {
+      end_pos = curr_pos;
+      timer_disable(counter_dev);
+      STEPPER_MOTOR_DISABLE();
+    }
+    //     temp++;
+    //     if (temp >= 10) {
+    LOG_INF("calib process: s_p: %d, c_p: %d, st_per: %d, c_st: %d", start_pos,
+            curr_pos, steps_per_cm, CALIB_MAX_STEPS - data.c_step);
+    //       temp = 0;
+    //     }
+    k_msleep(1000);
+    err = rangefinder_meas();
+  }
+  // TODO save calib data to eeprom
+  LOG_INF("calibration done");
+  LOG_INF("start pos = %d", start_pos);
+  LOG_INF("end_pos = %d", end_pos);
+  LOG_INF("steps_per_cm = %d", steps_per_cm);
+
+  memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
+  return 0;
+}
+
+void slider_process() {
+  static stepper_thread_data data;
+  static uint32_t steps_per_interval;
+  alarm_cfg.user_data = &data;
+
+  count_steps(&slider);
+  count_duration(&slider);
+  steps_per_interval = slider.steps / slider.interval_steps;
+  for (uint32_t i = 1; i <= slider.interval_steps; i++) {
+    data.c_interval = i;
+    data.c_step = steps_per_interval;
+    set_interval_process(&data);
+    while (timer_status) {
+      k_msleep(1);
+    }
+    k_msleep(slider.interval_delay);
+  }
+  memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
+}
+
+void slider_thread() {
+  while (1) {
+    if (!memcmp(slider.status, SLIDER_STATUS_IDLE, 4)) {
+      k_msleep(100);
+    } else if (!memcmp(slider.status, SLIDER_STATUS_HALTED, 4)) {
+      memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
+    } else if (!memcmp(slider.status, SLIDER_STATUS_ERROR, 4)) {
+      k_msleep(100);
+    } else if (!memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) {
+      slider_process();
+    } else if (!memcmp(slider.status, SLIDER_STATUS_CALIB, 4)) {
+      slider_calib();
+    }
+    k_msleep(10);
   }
 }
