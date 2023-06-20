@@ -9,17 +9,19 @@ class Attribute {
     this.val_fb
     this.enable_notify = false
     this.enable_write = false
+    // this.css_val = null
+    // this.css_text = null
     att_array.push(this)
   }
 }
 
-var color = {
+const color = {
   success: "#008800",
   pending: "#AA8800",
   failure: "#AA0000",
 }
 
-let att_array = []
+const att_array = []
 
 const service_uuid = "88a30000-6cfa-440d-8ddd-4a2d48a4812f"
 const status = new Attribute("0001", "notifyStatus", "notifyStatus", "string")
@@ -52,6 +54,20 @@ soft_start.enable_write = true
 intervals.enable_write = true
 int_delay.enable_write = true
 
+start_pos.css_val = "--value-a"
+end_pos.css_val = "--value-b"
+speed.css_val = "--value-b"
+soft_start.css_val = "--value-a"
+intervals.css_val = "--value"
+int_delay.css_val = "--value"
+
+start_pos.css_text = "--text-value-a"
+end_pos.css_text = "--text-value-b"
+speed.css_text = "--text-value-b"
+soft_start.css_text = "--text-value-a"
+intervals.css_text = "--text-value"
+int_delay.css_text = "--text-value"
+
 async function scanForDevices() {
   try {
     if (!navigator.bluetooth) {
@@ -81,13 +97,10 @@ async function connectToDevice() {
     for (let i = 0; i < att_array.length; i++) {
       att_array[i].ch = await service.getCharacteristic(att_array[i].uuid)
     }
+
     await readAllValues()
-    for (let i = 0; i < att_array.length; i++) {
-      if (att_array[i].enable_notify) {
-        await att_array[i].ch.startNotifications()
-        await att_array[i].ch.addEventListener("characteristicvaluechanged", handleNotification)
-      }
-    }
+    await enableNotify()
+    await enableWrite()
   } catch (error) {
     console.error(error)
   }
@@ -100,8 +113,10 @@ async function handleNotification(event) {
     if (event.target.uuid === att_array[i].uuid) {
       if (att_array[i].val_type === "string") {
         att_array[i].val_id.textContent = await decodedValue
+        // att_array[i].val_id.textContent = decodedValue
       } else if (att_array[i].val_type === "int") {
         att_array[i].val_fb = parseInt(decodedValue)
+        updateCssVal(att_array[i])
         if (att_array[i].val === att_array[i].val_fb) {
           att_array[i].id.style.setProperty("--primary-color", color.success)
         } else {
@@ -145,9 +160,11 @@ async function readValue(att) {
     const value = await att.ch.readValue()
     const decodedValue = new TextDecoder().decode(value)
     if (att.val_type === "string") {
-      att.val_id.textContent = await decodedValue
+      att.val_id.textContent = decodedValue
+      // att.val_id.textContent = await decodedValue
     } else if (att.val_type === "int") {
       att.val = att.val_id.value = parseInt(decodedValue)
+      updateCssVal(att)
     }
     att.id.style.setProperty("--primary-color", color.success)
   } catch (error) {
@@ -164,19 +181,42 @@ async function readAllValues() {
   }
 }
 
-for (let i = 0; i < att_array.length; i++) {
-  if (att_array[i].enable_write) {
-    att_array[i].val_id.addEventListener("click", function () {
-      writeValue(att_array[i])
-    })
+async function enableNotify() {
+  for (let i = 0; i < att_array.length; i++) {
+    if (att_array[i].enable_notify) {
+      await att_array[i].ch.startNotifications()
+      await att_array[i].ch.addEventListener("characteristicvaluechanged", handleNotification)
+    }
   }
 }
 
+async function enableWrite() {
+  for (let i = 0; i < att_array.length; i++) {
+    if (att_array[i].enable_write) {
+      att_array[i].val_id.addEventListener("click", function() {
+        writeValue(att_array[i])
+      })
+      att_array[i].val_id.addEventListener("touchend", function() {
+        writeValue(att_array[i])
+      })
+      console.log("write val enabled", att_array[i].id)
+    }
+  }
+}
 document.getElementById("scanButton").addEventListener("click", scanForDevices)
 document.getElementById("connectButton").addEventListener("click", connectToDevice)
-document.getElementById("startButton").addEventListener("click", function () {
+document.getElementById("startButton").addEventListener("click", function() {
   writeCmd(ch_cmd, "start")
 })
-document.getElementById("stopButton").addEventListener("click", function () {
+document.getElementById("stopButton").addEventListener("click", function() {
   writeCmd(ch_cmd, "stop")
 })
+
+function updateCssVal(att) {
+  if (att.css_val != undefined) {
+    att.id.style.setProperty(att.css_val, att.val)
+  }
+  if (att.css_text != undefined) {
+    att.id.style.setProperty(att.css_text, att.val)
+  }
+}
