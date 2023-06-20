@@ -1,14 +1,14 @@
 class Attribute {
-  constructor(ch_uuid, id, val_id, val_type) {
+  constructor(ch_uuid, id, val_id, val_type, val, en_notify, en_write) {
     this.uuid = service_uuid.substr(0, 4) + ch_uuid.substr(0, 4) + service_uuid.substr(8)
     this.ch
     this.id = document.getElementById(id)
-    this.val
+    this.val = val
     this.val_id = document.getElementById(val_id)
     this.val_type = val_type
     this.val_fb
-    this.enable_notify = false
-    this.enable_write = false
+    this.enable_notify = en_notify
+    this.enable_write = en_write
     // this.css_val = null
     // this.css_text = null
     att_array.push(this)
@@ -24,36 +24,40 @@ const color = {
 const att_array = []
 
 const service_uuid = "88a30000-6cfa-440d-8ddd-4a2d48a4812f"
-const status = new Attribute("0001", "notifyStatus", "notifyStatus", "string")
-const command = new Attribute("0002", null, null, null)
-const start_pos = new Attribute("0010", "#position", "#position_start", "int")
-const end_pos = new Attribute("0011", "#position", "#position_end", "int")
+const status = new Attribute("0001", "notifyStatus", "notifyStatus", "string", null, true, false)
+const start_pos = new Attribute("0010", "#position", "#position_start", "int", null, true, true)
+const end_pos = new Attribute("0011", "#position", "#position_end", "int", null, true, true)
 // const duration = new Attribute("0012", "writeDurationButton", null, "notifyValueDuration", "int")
-const speed = new Attribute("0013", "#speed", "#speed_high", "int")
-const soft_start = new Attribute("0014", "#speed", "#speed_low", "int")
-const intervals = new Attribute("0015", "#interval_num", "#interval_num_val", "int")
-const int_delay = new Attribute("0016", "#interval_delay", "#interval_delay_val", "int")
+const speed = new Attribute("0013", "#speed", "#speed_high", "int", null, true, true)
+const soft_start = new Attribute("0014", "#speed", "#speed_low", "int", null, true, true)
+const intervals = new Attribute("0015", "#interval_num", "#interval_num_val", "int", null, true, true)
+const int_delay = new Attribute("0016", "#interval_delay", "#interval_delay_val", "int", null, true, true)
 
-//notify setup
-status.enable_notify = true
-start_pos.enable_notify = true
-end_pos.enable_notify = true
-// st duration.enable_notify = true
-speed.enable_notify = true
-soft_start.enable_notify = true
-intervals.enable_notify = true
-int_delay.enable_notify = true
+//commands
+const cmd_start = new Attribute("0002", null, "#cmd_start", "string", "start", false, true)
+const cmd_stop = new Attribute("0002", null, "#cmd_stop", "string", "stop", false, true)
+// const cmd_check_conn = new Attribute("0001", null, "#connection", "string", "conn_status", false, )
 
-//write setup
+// //notify setup
+// status.enable_notify = true
+// start_pos.enable_notify = true
+// end_pos.enable_notify = true
+// // st duration.enable_notify = true
+// speed.enable_notify = true
+// soft_start.enable_notify = true
+// intervals.enable_notify = true
+// int_delay.enable_notify = true
+//
+// //write setup
 // command.enable_write = true
-start_pos.enable_write = true
-end_pos.enable_write = true
-// st duration.enable_write = true
-speed.enable_write = true
-soft_start.enable_write = true
-intervals.enable_write = true
-int_delay.enable_write = true
-
+// start_pos.enable_write = true
+// end_pos.enable_write = true
+// // st duration.enable_write = true
+// speed.enable_write = true
+// soft_start.enable_write = true
+// intervals.enable_write = true
+// int_delay.enable_write = true
+//
 start_pos.css_val = "--value-a"
 end_pos.css_val = "--value-b"
 speed.css_val = "--value-b"
@@ -101,6 +105,7 @@ async function connectToDevice() {
     await readAllValues()
     await enableNotify()
     await enableWrite()
+    document.getElementById("#connection").innerHTML = "connected"
   } catch (error) {
     console.error(error)
   }
@@ -112,8 +117,7 @@ async function handleNotification(event) {
   for (let i = 0; i < att_array.length; i++) {
     if (event.target.uuid === att_array[i].uuid) {
       if (att_array[i].val_type === "string") {
-        att_array[i].val_id.textContent = await decodedValue
-        // att_array[i].val_id.textContent = decodedValue
+        att_array[i].val_id.textContent = decodedValue
       } else if (att_array[i].val_type === "int") {
         att_array[i].val_fb = parseInt(decodedValue)
         updateCssVal(att_array[i])
@@ -131,26 +135,17 @@ async function handleNotification(event) {
 async function writeValue(att) {
   try {
     const valueToWrite = att.val_id.value
+    console.log("write", att)
     att.val = parseInt(valueToWrite)
-    att.id.style.setProperty("--primary-color", color.pending)
+    if (att.id != null) {
+      att.id.style.setProperty("--primary-color", color.pending)
+    }
     const valueArray = new TextEncoder().encode(valueToWrite)
     const valueToWriteUint8 = new Uint8Array(valueArray)
     await att.ch.writeValue(valueToWriteUint8)
-    console.log("Value written:", valueToWriteUint8)
+    // console.log("Value written:", valueToWriteUint8)
   } catch (error) {
-    console.error(error)
-  }
-}
-
-async function writeCmd(characteristic, writeValueElement) {
-  try {
-    const valueToWrite = writeValueElement
-    const valueArray = new TextEncoder().encode(valueToWrite)
-    const valueToWriteUint8 = new Uint8Array(valueArray)
-    await characteristic.writeValue(valueToWriteUint8)
-    console.log("Value written:", valueToWriteUint8)
-    writeValueElement.value = ""
-  } catch (error) {
+    console.log(att)
     console.error(error)
   }
 }
@@ -199,18 +194,24 @@ async function enableWrite() {
       att_array[i].val_id.addEventListener("touchend", function() {
         writeValue(att_array[i])
       })
-      console.log("write val enabled", att_array[i].id)
+      att_array[i].val_id.disabled = false
+      // console.log("write val enabled", att_array[i].id)
     }
   }
 }
 document.getElementById("scanButton").addEventListener("click", scanForDevices)
 document.getElementById("connectButton").addEventListener("click", connectToDevice)
-document.getElementById("startButton").addEventListener("click", function() {
-  writeCmd(ch_cmd, "start")
-})
-document.getElementById("stopButton").addEventListener("click", function() {
-  writeCmd(ch_cmd, "stop")
-})
+document.getElementById("connectButton").addEventListener("click", connectToDevice)
+// document.getElementById("startButton").addEventListener("click", function() {
+//   command.val = "start"
+//   writeValue(command)
+//   // writeCmd(ch_cmd, "start")
+// })
+// document.getElementById("stopButton").addEventListener("click", function() {
+//   command.val = "stop"
+//   writeValue(command)
+//   // writeCmd(ch_cmd, "stop")
+// })
 
 function updateCssVal(att) {
   if (att.css_val != undefined) {
@@ -220,3 +221,12 @@ function updateCssVal(att) {
     att.id.style.setProperty(att.css_text, att.val)
   }
 }
+
+var check_connection = setInterval(async function() {
+  try {
+    await status.ch.readValue()
+    document.getElementById("#connection").innerHTML = "connected"
+  } catch (error) {
+    document.getElementById("#connection").innerHTML = "disconnected"
+  }
+}, 5000)

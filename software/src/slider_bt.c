@@ -136,6 +136,15 @@ static ssize_t read_int_param(struct bt_conn *conn,
   return bt_gatt_attr_read(conn, attr, buf, len, offset, value, strlen(value));
 }
 
+static ssize_t read_str_param(struct bt_conn *conn,
+                              const struct bt_gatt_attr *attr, void *buf,
+                              uint16_t len, uint16_t offset) {
+  const char *value = attr->user_data;
+  LOG_INF("read value, str: %s", value);
+
+  return bt_gatt_attr_read(conn, attr, buf, len, offset, value, strlen(value));
+}
+
 static ssize_t cmd_handler(struct bt_conn *conn,
                            const struct bt_gatt_attr *attr, const void *buf,
                            uint16_t len, uint16_t offset, uint8_t flags) {
@@ -152,8 +161,8 @@ static ssize_t cmd_handler(struct bt_conn *conn,
     memcpy(slider.status, SLIDER_STATUS_RUNNING, 4);
   } else if (!memcmp(cmd, "stop", len)) {
     slider_stop();
-    // slider_calib();
-
+  } else if (!memcmp(cmd, "calib", len)) {
+    slider_calib();
   } else {
     LOG_ERR("wrong command \"%s\"", cmd);
   }
@@ -168,7 +177,7 @@ static void ct_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value) {
 BT_GATT_SERVICE_DEFINE(
     slider_service, BT_GATT_PRIMARY_SERVICE(&slider_service_uuid.uuid),
     BT_GATT_CHARACTERISTIC(&slider_status_uuid.uuid, DEFAULT_RO_PROPS,
-                           DEFAULT_RO_PERMS, read_int_param, write_int_param,
+                           DEFAULT_RO_PERMS, read_str_param, write_int_param,
                            slider.status),
     BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
     BT_GATT_CHARACTERISTIC(&slider_start_pos_uuid.uuid, DEFAULT_WR_PROPS,
@@ -211,6 +220,7 @@ BT_GATT_SERVICE_DEFINE(
 #define NOTIFY_SLIDER_INTERVALS NOTIFY_SLIDER_SOFT_START + 3
 #define NOTIFY_SLIDER_INTERVAL_DELAY NOTIFY_SLIDER_INTERVALS + 3
 
+
 static void bt_notify_diff_str(const struct bt_gatt_attr *chrc,
                                const void *current_msg, void *old_msg,
                                size_t n) {
@@ -228,7 +238,7 @@ static void bt_notify_diff_str(const struct bt_gatt_attr *chrc,
     LOG_ERR("gatt notify failed, reason: %d", err);
     return;
   }
-  LOG_INF("notify: %s", (char*)old_msg);
+  LOG_INF("notify: %s", (char *)old_msg);
 }
 
 static void bt_notify_diff_int(const struct bt_gatt_attr *chrc,

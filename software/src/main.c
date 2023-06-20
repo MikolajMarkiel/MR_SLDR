@@ -56,11 +56,11 @@ int app_init() {
     LOG_ERR("Stepper motor init failed (err %d)", err);
     return 1;
   }
-  err = rangefinder_init();
-  if (err) {
-    LOG_ERR("Distance meter init failed (err %d)", err);
-    return 2;
-  }
+  // err = rangefinder_init();
+  // if (err) {
+  //   LOG_ERR("Distance meter init failed (err %d)", err);
+  //   return 2;
+  // }
   err = slider_bt_init();
   if (err) {
     LOG_ERR("Bluetooth module failed (err %d)", err);
