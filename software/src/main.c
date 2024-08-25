@@ -32,7 +32,7 @@ LOG_MODULE_REGISTER(app);
 K_THREAD_DEFINE(bt_notify, 1024, bt_notify_handler, NULL, NULL, NULL, 7, 0, 0);
 K_THREAD_DEFINE(slider_id, 2048, slider_thread, NULL, NULL, NULL, 3, 0, 0);
 
-int app_init();
+int app_init(void);
 
 int main(void) {
   int err;
@@ -42,30 +42,33 @@ int main(void) {
     return err;
   }
 
+  uint8_t state = 0;
   while (1) {
     //     rangefinder_meas();
     k_msleep(500);
+    state ^= 1; 
+    stepper_motor_step_test(state);
   }
   return 0;
 }
 
-int app_init() {
+int app_init(void) {
   int err;
   err = stepper_motor_init();
   if (err) {
     LOG_ERR("Stepper motor init failed (err %d)", err);
     return 1;
   }
-  // err = rangefinder_init();
-  // if (err) {
-  //   LOG_ERR("Distance meter init failed (err %d)", err);
-  //   return 2;
-  // }
+  err = rangefinder_init();
+  if (err) {
+    LOG_ERR("Distance meter init failed (err %d)", err);
+    return 2;
+  }
   err = slider_bt_init();
   if (err) {
     LOG_ERR("Bluetooth module failed (err %d)", err);
     return 3;
   }
-  LOG_INF("Application started succesfully");
+  LOG_INF("Application started successfully");
   return 0;
 }

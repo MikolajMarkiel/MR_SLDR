@@ -27,9 +27,9 @@ SOFTWARE.
 extern "C" {
 #endif
 
-int slider_bt_init();
+int slider_bt_init(void);
 
-void bt_notify_handler();
+void bt_notify_handler(void);
 
 #ifdef __cplusplus
 }

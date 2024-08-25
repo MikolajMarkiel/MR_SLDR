@@ -29,22 +29,26 @@ SOFTWARE.
 
 // #define VL53L0X_SAMPLES 1
 
-const struct device *const vl53l0x_dev = DEVICE_DT_GET_ONE(st_vl53l0x);
+// const struct device *const vl53l0x_dev = DEVICE_DT_GET_ONE(st_vl53l0x);
 struct sensor_value rangefinder_value;
 
-int rangefinder_init(void) { return !device_is_ready(vl53l0x_dev); }
+int rangefinder_init(void) { 
+  int result = 0;
+  // result = !device_is_ready(vl53l0x_dev); 
+  return result;
+}
 
-int rangefinder_meas() {
-  int err;
-  err = sensor_sample_fetch_chan(vl53l0x_dev, SENSOR_CHAN_DISTANCE);
-  if (err) {
-    return -1;
-  }
-  err =
-      sensor_channel_get(vl53l0x_dev, SENSOR_CHAN_DISTANCE, &rangefinder_value);
-  if (err) {
-    return -2;
-  }
+int rangefinder_meas(void) {
+  // int err;
+  // err = sensor_sample_fetch_chan(vl53l0x_dev, SENSOR_CHAN_DISTANCE);
+  // if (err) {
+  //   return -1;
+  // }
+  // err =
+  //     sensor_channel_get(vl53l0x_dev, SENSOR_CHAN_DISTANCE, &rangefinder_value);
+  // if (err) {
+  //   return -2;
+  // }
   //   int val_mm = 0;
   //   for (int i = 0; i < VL53L0X_SAMPLES; i++) {
   //     err = sensor_sample_fetch_chan(vl53l0x_dev, SENSOR_CHAN_DISTANCE);

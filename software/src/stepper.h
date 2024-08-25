@@ -51,7 +51,8 @@ extern "C" {
 #define DEFAULT_INTERVAL_DELAY 250
 #define DEFAULT_SOFT_START 500
 
-typedef struct slider_params {
+typedef struct slider_params 
+{
   char status[10];
   uint32_t dir;
   uint32_t start_pos;
@@ -68,9 +69,11 @@ extern slider_params slider;
 
 int stepper_motor_init(void);
 
-void slider_stop();
-int slider_calib();
-void slider_thread();
+void slider_stop(void);
+int slider_calib(void);
+void slider_thread(void);
+
+int stepper_motor_step_test(uint8_t state);
 
 #ifdef __cplusplus
 }

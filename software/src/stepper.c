@@ -45,7 +45,8 @@ SOFTWARE.
 
 LOG_MODULE_REGISTER(stepper);
 
-typedef struct {
+typedef struct 
+{
   uint32_t c_step;
   uint32_t c_delay;
   uint32_t c_interval;
@@ -53,7 +54,8 @@ typedef struct {
   uint32_t min_delay;
 } stepper_thread_data;
 
-typedef enum {
+typedef enum 
+{
   FORWARD = 0,
   REVERSE = 1,
 } T_DIR;
@@ -66,54 +68,65 @@ static struct counter_alarm_cfg alarm_cfg;
 static uint32_t timer_status;
 static uint32_t steps;
 
-static const struct gpio_dt_spec stepper_motor_step =
-    GPIO_DT_SPEC_GET(DT_NODELABEL(stepper_motor_step), gpios);
-static const struct gpio_dt_spec stepper_motor_dir =
-    GPIO_DT_SPEC_GET(DT_NODELABEL(stepper_motor_dir), gpios);
-static const struct gpio_dt_spec stepper_motor_en =
-    GPIO_DT_SPEC_GET(DT_NODELABEL(stepper_motor_en), gpios);
+static const struct gpio_dt_spec stepper_motor_step = GPIO_DT_SPEC_GET(DT_NODELABEL(stepper_motor_step), gpios);
+static const struct gpio_dt_spec stepper_motor_dir = GPIO_DT_SPEC_GET(DT_NODELABEL(stepper_motor_dir), gpios);
+static const struct gpio_dt_spec stepper_motor_en = GPIO_DT_SPEC_GET(DT_NODELABEL(stepper_motor_en), gpios);
 
-static int timer_enable(const struct device *dev) {
+static int timer_enable(const struct device *dev) 
+{
   int err;
   err = counter_start(dev);
-  if (err == 0) {
+  if (err == 0) 
+  {
     timer_status = 1;
   }
   return err;
 }
 
-static int timer_disable(const struct device *dev) {
+static int timer_disable(const struct device *dev) 
+{
   int err;
   err = counter_stop(dev);
-  if (err == 0) {
+  if (err == 0) 
+  {
     timer_status = 0;
   }
   return err;
 }
 
-static void select_dir(slider_params *slider) {
-  if (slider->end_pos > slider->start_pos) {
+static void select_dir(slider_params *slider) 
+{
+  if (slider->end_pos > slider->start_pos) 
+  {
     slider->dir = FORWARD;
-  } else {
+  } 
+  else 
+  {
     slider->dir = REVERSE;
   }
 }
 
-static void count_steps(slider_params *slider) {
+static void count_steps(slider_params *slider) 
+{
   select_dir(slider);
-  if (slider->dir == FORWARD) {
+  if (slider->dir == FORWARD) 
+  {
     slider->steps = (slider->end_pos - slider->start_pos) * STEPS_FACTOR;
-  } else {
+  } 
+  else 
+  {
     slider->steps = (slider->start_pos - slider->end_pos) * STEPS_FACTOR;
   }
 }
 
-static void count_duration(slider_params *slider) {
+static void count_duration(slider_params *slider) 
+{
   // TODO
   slider->duration = 0;
 }
 
-static void slider_init_params(slider_params *slider) {
+static void slider_init_params(slider_params *slider) 
+{
     memcpy(slider->status, SLIDER_STATUS_IDLE, sizeof(SLIDER_STATUS_IDLE));
   // memcpy(slider->status, SLIDER_STATUS_CALIB, sizeof(SLIDER_STATUS_CALIB));
   slider->start_pos = DEFAULT_START_POS;
@@ -127,14 +140,17 @@ static void slider_init_params(slider_params *slider) {
   count_duration(slider);
 }
 
-static int stepper_gpio_configure(const struct gpio_dt_spec *pin, char *name) {
+static int stepper_gpio_configure(const struct gpio_dt_spec *pin, char *name) 
+{
   int err;
-  if (!gpio_is_ready_dt(pin)) {
+  if (!gpio_is_ready_dt(pin)) 
+  {
     LOG_ERR("%s gpio isn't ready", name);
     return 1;
   }
   err = gpio_pin_configure_dt(pin, GPIO_OUTPUT_ACTIVE);
-  if (err < 0) {
+  if (err < 0) 
+  {
     LOG_ERR("%s gpio configure failed", name);
     return err;
   }
@@ -142,22 +158,26 @@ static int stepper_gpio_configure(const struct gpio_dt_spec *pin, char *name) {
 }
 
 static void counter_callback(const struct device *counter_dev, uint8_t chan_id,
-                             uint32_t ticks, void *user_data) {
+                             uint32_t ticks, void *user_data) 
+{
   static uint8_t pin_state = 0;
   stepper_thread_data *data = user_data;
 
   pin_state ^= 1;
   data->c_step -= (pin_state == 0) ? 1 : 0;
   gpio_pin_set_dt(&stepper_motor_step, pin_state);
-  if (data->c_step == 0) {
+  if (data->c_step == 0) 
+  {
     timer_disable(counter_dev);
     STEPPER_MOTOR_DISABLE();
     return;
   }
 
-  if (data->max_delay - data->c_delay >= data->c_step) {
+  if (data->max_delay - data->c_delay >= data->c_step) 
+  {
     data->c_delay++;
-  } else if (data->c_delay > data->min_delay) {
+  } else if (data->c_delay > data->min_delay) 
+  {
     data->c_delay--;
   }
 
@@ -166,16 +186,19 @@ static void counter_callback(const struct device *counter_dev, uint8_t chan_id,
   return;
 }
 
-static int set_interval_process(stepper_thread_data *data) {
+static int set_interval_process(stepper_thread_data *data) 
+{
   int err;
   uint32_t delay_speed;
   uint32_t delay_soft;
   const uint32_t min_delay = counter_us_to_ticks(counter_dev, MIN_MOTOR_DELAY);
 
-  //   if (memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) {
+  //   if (memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) 
+  //   {
   //     return -1;
   //   }
-  if (slider.speed == 0) {
+  if (slider.speed == 0) 
+  {
     LOG_ERR("invalid speed value");
     return -2;
   }
@@ -183,9 +206,12 @@ static int set_interval_process(stepper_thread_data *data) {
   data->c_delay = delay_speed > min_delay ? delay_speed : min_delay;
   data->min_delay = data->c_delay;
 
-  if (slider.soft_start != 0) {
+  if (slider.soft_start != 0) 
+  {
     delay_soft = CB_DELAY(slider.soft_start);
-  } else {
+  }
+  else 
+  {
     delay_soft = 0;
   }
   data->c_delay = delay_speed > delay_soft ? delay_speed : delay_soft;
@@ -197,38 +223,46 @@ static int set_interval_process(stepper_thread_data *data) {
   STEPPER_MOTOR_ENABLE();
 
   err = timer_enable(counter_dev);
-  if (err) {
+  if (err) 
+  {
     LOG_ERR("timer_enable failed");
   }
   err = counter_set_channel_alarm(counter_dev, ALARM_CHANNEL_ID, &alarm_cfg);
-  if (err) {
+  if (err) 
+  {
     LOG_ERR("counter set channel alarm failed");
   }
   return 0;
 }
 
-int stepper_motor_init(void) {
+int stepper_motor_init(void) 
+{
   int err;
   err = stepper_gpio_configure(&stepper_motor_step, "stepper_motor_step");
-  if (err) {
+  if (err) 
+  {
     return err;
   }
   err = stepper_gpio_configure(&stepper_motor_dir, "stepper_motor_dir");
-  if (err) {
+  if (err) 
+  {
     return err;
   }
   err = stepper_gpio_configure(&stepper_motor_en, "stepper_motor_en");
-  if (err) {
+  if (err) 
+  {
     return err;
   }
 
   err = gpio_pin_set_dt(&stepper_motor_step, 0); // TODO set in dt
-  if (err) {
+  if (err) 
+  {
     return err;
   }
 
   slider_init_params(&slider);
-  if (!device_is_ready(counter_dev)) {
+  if (!device_is_ready(counter_dev)) 
+  {
     LOG_ERR("counter_dev not ready.\n");
     return -ENODEV;
   }
@@ -239,16 +273,20 @@ int stepper_motor_init(void) {
   return 0;
 }
 
-void slider_stop() {
+void slider_stop(void) 
+{
   LOG_INF("process stopped");
   memcpy(slider.status, SLIDER_STATUS_HALTED, 4);
   timer_disable(counter_dev);
   STEPPER_MOTOR_DISABLE();
 }
 
-int slider_calib() {
+int slider_calib(void) 
+{
   int err;
-  stepper_thread_data data = {.c_delay = CALIB_STEPS_DELAY,
+  stepper_thread_data data = 
+    {
+      .c_delay = CALIB_STEPS_DELAY,
                               .c_step = CALIB_MAX_STEPS,
                               .c_interval = 1,
                               .max_delay = CALIB_STEPS_DELAY,
@@ -263,28 +301,33 @@ int slider_calib() {
   uint32_t temp;
 
   err = rangefinder_meas();
-  if (err) {
+  if (err) 
+  {
     memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
     return err;
   }
   start_pos = old_pos = curr_pos = distance_to_cm(&rangefinder_value);
 
   set_interval_process(&data);
-  while (timer_status) {
+  while (timer_status) 
+  {
     curr_pos = distance_to_cm(&rangefinder_value);
-    if (curr_pos > old_pos) {
+    if (curr_pos > old_pos) 
+    {
       steps_per_cm = (CALIB_MAX_STEPS - data.c_step) / (curr_pos - start_pos);
       old_pos = curr_pos;
     }
     if ((curr_pos - start_pos >= 10) &&
         ((CALIB_MAX_STEPS - data.c_step) >
-         steps_per_cm * (1 + curr_pos - start_pos))) {
+         steps_per_cm * (1 + curr_pos - start_pos))) 
+    {
       end_pos = curr_pos;
       timer_disable(counter_dev);
       STEPPER_MOTOR_DISABLE();
     }
     //     temp++;
-    //     if (temp >= 10) {
+    //     if (temp >= 10) 
+    //     {
     LOG_INF("calib process: s_p: %d, c_p: %d, st_per: %d, c_st: %d", start_pos,
             curr_pos, steps_per_cm, CALIB_MAX_STEPS - data.c_step);
     //       temp = 0;
@@ -302,7 +345,8 @@ int slider_calib() {
   return 0;
 }
 
-void slider_process() {
+void slider_process(void) 
+{
   static stepper_thread_data data;
   static uint32_t steps_per_interval;
   alarm_cfg.user_data = &data;
@@ -310,11 +354,13 @@ void slider_process() {
   count_steps(&slider);
   count_duration(&slider);
   steps_per_interval = slider.steps / slider.interval_steps;
-  for (uint32_t i = 1; i <= slider.interval_steps; i++) {
+  for (uint32_t i = 1; i <= slider.interval_steps; i++) 
+  {
     data.c_interval = i;
     data.c_step = steps_per_interval;
     set_interval_process(&data);
-    while (timer_status) {
+    while (timer_status) 
+    {
       k_msleep(1);
     }
     k_msleep(slider.interval_delay);
@@ -322,19 +368,36 @@ void slider_process() {
   memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
 }
 
-void slider_thread() {
-  while (1) {
-    if (!memcmp(slider.status, SLIDER_STATUS_IDLE, 4)) {
+void slider_thread(void) 
+{
+  while (1) 
+  {
+    if (!memcmp(slider.status, SLIDER_STATUS_IDLE, 4)) 
+    {
       k_msleep(100);
-    } else if (!memcmp(slider.status, SLIDER_STATUS_HALTED, 4)) {
+    } 
+    else if (!memcmp(slider.status, SLIDER_STATUS_HALTED, 4)) 
+    {
       memcpy(slider.status, SLIDER_STATUS_IDLE, 4);
-    } else if (!memcmp(slider.status, SLIDER_STATUS_ERROR, 4)) {
+    } 
+    else if (!memcmp(slider.status, SLIDER_STATUS_ERROR, 4)) 
+    {
       k_msleep(100);
-    } else if (!memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) {
+    } 
+    else if (!memcmp(slider.status, SLIDER_STATUS_RUNNING, 4)) 
+    {
       slider_process();
-    } else if (!memcmp(slider.status, SLIDER_STATUS_CALIB, 4)) {
+    } 
+    else if (!memcmp(slider.status, SLIDER_STATUS_CALIB, 4)) 
+    {
       slider_calib();
     }
     k_msleep(10);
   }
+}
+
+int stepper_motor_step_test(uint8_t state)
+{
+  gpio_pin_set_dt(&stepper_motor_step, state);
+  return 0;
 }
