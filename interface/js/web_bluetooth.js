@@ -37,26 +37,6 @@ const int_delay = new Attribute("0016", "#interval_delay", "#interval_delay_val"
 const cmd_start = new Attribute("0002", null, "#cmd_start", "string", "start", false, true)
 const cmd_stop = new Attribute("0002", null, "#cmd_stop", "string", "stop", false, true)
 // const cmd_check_conn = new Attribute("0001", null, "#connection", "string", "conn_status", false, )
-
-// //notify setup
-// status.enable_notify = true
-// start_pos.enable_notify = true
-// end_pos.enable_notify = true
-// // st duration.enable_notify = true
-// speed.enable_notify = true
-// soft_start.enable_notify = true
-// intervals.enable_notify = true
-// int_delay.enable_notify = true
-//
-// //write setup
-// command.enable_write = true
-// start_pos.enable_write = true
-// end_pos.enable_write = true
-// // st duration.enable_write = true
-// speed.enable_write = true
-// soft_start.enable_write = true
-// intervals.enable_write = true
-// int_delay.enable_write = true
 //
 start_pos.css_val = "--value-a"
 end_pos.css_val = "--value-b"
@@ -134,12 +114,17 @@ async function handleNotification(event) {
 
 async function writeValue(att) {
   try {
-    const valueToWrite = att.val_id.value
-    console.log("write", att)
-    att.val = parseInt(valueToWrite)
+    var valueToWrite
+    if (att.val_id.value != ""){
+      valueToWrite = att.val_id.value
+      att.val = parseInt(valueToWrite)
+    } else {
+      valueToWrite = att.val
+    }
     if (att.id != null) {
       att.id.style.setProperty("--primary-color", color.pending)
     }
+    console.log("write", valueToWrite)
     const valueArray = new TextEncoder().encode(valueToWrite)
     const valueToWriteUint8 = new Uint8Array(valueArray)
     await att.ch.writeValue(valueToWriteUint8)
@@ -201,17 +186,6 @@ async function enableWrite() {
 }
 document.getElementById("scanButton").addEventListener("click", scanForDevices)
 document.getElementById("connectButton").addEventListener("click", connectToDevice)
-document.getElementById("connectButton").addEventListener("click", connectToDevice)
-// document.getElementById("startButton").addEventListener("click", function() {
-//   command.val = "start"
-//   writeValue(command)
-//   // writeCmd(ch_cmd, "start")
-// })
-// document.getElementById("stopButton").addEventListener("click", function() {
-//   command.val = "stop"
-//   writeValue(command)
-//   // writeCmd(ch_cmd, "stop")
-// })
 
 function updateCssVal(att) {
   if (att.css_val != undefined) {
