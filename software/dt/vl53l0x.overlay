@@ -1,0 +1,9 @@
+&i2c0 {
+vl53l0x_sen: vl53l0x@29{
+   compatible = "st,vl53l0x"; 
+   reg = < 0x29 >;
+   status = "okay";
+   friendly-name = "rangefinder";
+   xshut-gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
+ };
+};

@@ -155,13 +155,13 @@ static ssize_t cmd_handler(struct bt_conn *conn,
     return len;
   }
   memcpy(cmd, buf, len);
-
+  cmd[len] = 0;
   LOG_INF("cmd handler cmd: \"%s\"", cmd);
-  if (!memcmp(cmd, "start", len)) {
+  if (!strcmp(cmd, "start")) {
     memcpy(slider.status, SLIDER_STATUS_RUNNING, 4);
-  } else if (!memcmp(cmd, "stop", len)) {
+  } else if (!strcmp(cmd, "stop")) {
     slider_stop();
-  } else if (!memcmp(cmd, "calib", len)) {
+  } else if (!strcmp(cmd, "calib")) {
     slider_calib();
   } else {
     LOG_ERR("wrong command \"%s\"", cmd);

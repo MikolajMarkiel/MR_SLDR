@@ -27,22 +27,37 @@ SOFTWARE.
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
 
+#define VL53L0X
+
 // #define VL53L0X_SAMPLES 1
 
+#ifdef VL53L0X
 const struct device *const vl53l0x_dev = DEVICE_DT_GET_ONE(st_vl53l0x);
+#endif
+
 struct sensor_value rangefinder_value;
 
-int rangefinder_init(void) { return !device_is_ready(vl53l0x_dev); }
+int rangefinder_init(void) 
+{ 
+#ifdef VL53L0X
+  return !device_is_ready(vl53l0x_dev); 
+#else
+  return -1;
+#endif
+}
 
-int rangefinder_meas() {
+int rangefinder_meas() 
+{
+#ifdef VL53L0X
   int err;
   err = sensor_sample_fetch_chan(vl53l0x_dev, SENSOR_CHAN_DISTANCE);
-  if (err) {
+  if (err) 
+  {
     return -1;
   }
-  err =
-      sensor_channel_get(vl53l0x_dev, SENSOR_CHAN_DISTANCE, &rangefinder_value);
-  if (err) {
+  err = sensor_channel_get(vl53l0x_dev, SENSOR_CHAN_DISTANCE, &rangefinder_value);
+  if (err) 
+  {
     return -2;
   }
   //   int val_mm = 0;
@@ -63,6 +78,9 @@ int rangefinder_meas() {
   //   printf("val_mm = %d\n", val_mm);
   //   return val_mm;
   return 0;
+#else 
+  return -1;
+#endif
 }
 
 int distance_to_cm(struct sensor_value *val) {

@@ -26,8 +26,15 @@ SOFTWARE.
 #include "stepper.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/gpio.h>
 
 LOG_MODULE_REGISTER(app);
+
+static const struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(DT_NODELABEL(led1), gpios);
+// static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(DT_NODELABEL(led2), gpios);
+// static const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(DT_NODELABEL(led3), gpios);
+// static const struct gpio_dt_spec led4 = GPIO_DT_SPEC_GET(DT_NODELABEL(led4), gpios);
 
 K_THREAD_DEFINE(bt_notify, 1024, bt_notify_handler, NULL, NULL, NULL, 7, 0, 0);
 K_THREAD_DEFINE(slider_id, 2048, slider_thread, NULL, NULL, NULL, 3, 0, 0);
@@ -44,6 +51,7 @@ int main(void) {
 
   while (1) {
     //     rangefinder_meas();
+    gpio_pin_toggle_dt(&led1);
     k_msleep(500);
   }
   return 0;
@@ -56,6 +64,16 @@ int app_init() {
     LOG_ERR("Stepper motor init failed (err %d)", err);
     return 1;
   }
+  err = !device_is_ready(led1.port);
+	{
+		LOG_ERR("LED1 init failed");
+		return 2;
+	}
+	err = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_ACTIVE);
+	if (err != 0)
+	{
+		return 3;
+	}
   // err = rangefinder_init();
   // if (err) {
   //   LOG_ERR("Distance meter init failed (err %d)", err);
