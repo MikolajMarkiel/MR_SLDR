@@ -1,0 +1,51 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 20,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
+                "BOARD_ROOT": "${sourceDir}"
+            }
+        },
+        {
+            "name": "esp32_devkit",
+            "inherits": "default",
+            "description": "Configuration for the esp32_devkit board",
+            "cacheVariables": {
+                "BOARD": "esp32",
+                "DTC_OVERLAY_FILE": "${sourceDir}/boards/xtensa/esp32/esp32.overlay"
+            }
+        },
+        {
+            "name": "mr_sldr_01",
+            "inherits": "default",
+            "description": "Configuration for the mr_sldr_01 board",
+            "cacheVariables": {
+                "BOARD": "mr_sldr_01"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "esp32_devkit",
+            "configurePreset": "esp32_devkit"
+        },
+        {
+            "name": "mr_sldr_01",
+            "configurePreset": "mr_sldr_01"
+        }
+    ],
+    "testPresets": [],
+    "workflowPresets": []
+}
+

@@ -42,12 +42,10 @@ int main(void) {
     return err;
   }
 
-  uint8_t state = 0;
   while (1) {
     //     rangefinder_meas();
     k_msleep(500);
-    state ^= 1; 
-    stepper_motor_step_test(state);
+    stepper_motor_step_test();
   }
   return 0;
 }

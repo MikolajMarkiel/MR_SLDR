@@ -396,8 +396,8 @@ void slider_thread(void)
   }
 }
 
-int stepper_motor_step_test(uint8_t state)
+int stepper_motor_step_test()
 {
-  gpio_pin_set_dt(&stepper_motor_step, state);
+  gpio_pin_toggle_dt(&stepper_motor_step);
   return 0;
 }

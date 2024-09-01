@@ -73,7 +73,7 @@ void slider_stop(void);
 int slider_calib(void);
 void slider_thread(void);
 
-int stepper_motor_step_test(uint8_t state);
+int stepper_motor_step_test();
 
 #ifdef __cplusplus
 }

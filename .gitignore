@@ -5,3 +5,4 @@ flash_monitor_esp32.sh
 *.swp
 *-backups/
 docs/
+out/
