@@ -11,24 +11,6 @@
 / {
 	model = "mr_sldr_01";
 	compatible = "espressif,esp32";
-	aliases {
-		// uart-0 = &uart0;
-		// i2c-0 = &i2c0;
-		// sw0 = &button0;
-		// watchdog0 = &wdt0;
-		// led0 = &blue_led;
-		// led1 = &green_led;
-		// led2 = &red_led;
-		// pwm-led0 = &pwm_led_red;
-		// pwm-led1 = &pwm_led_green;
-		// pwm-led2 = &pwm_led_blue;
-		// red-pwm-led = &pwm_led_red;
-		// green-pwm-led = &pwm_led_green;
-		// blue-pwm-led = &pwm_led_blue;
-		// uart-0 = &uart0;
-		// i2c-0 = &i2c0;
-		// watchdog0 = &wdt0;
-	};
 
 	chosen {
 		zephyr,sram = &sram0;
@@ -39,85 +21,44 @@
 
 	leds {
 		compatible = "gpio-leds";
-     // camera_control1: camera_control1 { 
-     //   gpios = <&gpio1 35 GPIO_ACTIVE_LOW>; 
-     // }; 
-     // camera_control2: camera_control2 { 
-     //   gpios = <&gpio1 35 GPIO_ACTIVE_LOW>; 
-     // }; 
-     // led1: led1 { 
-     //   gpios = <&gpio1 35 GPIO_ACTIVE_HIGH>; 
-     // }; 
-     // led2: led2 { 
-     //   gpios = <&gpio1 34 GPIO_ACTIVE_HIGH>; 
-     // }; 
-     // led3: led3 { 
-     //   gpios = <&gpio1 39 GPIO_ACTIVE_HIGH>; 
-     // }; 
-     // led4: led4 { 
-     //   gpios = <&gpio1 36 GPIO_ACTIVE_HIGH>; 
-     // }; 
-     // stepper_motor_step: stepper_motor_step { 
-     //   gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>; 
-     // }; 
-     // stepper_motor_dir: stepper_motor_dir { 
-     //   gpios = <&gpio0 25 GPIO_ACTIVE_HIGH>; 
-     // }; 
-     // stepper_motor_en: stepper_motor_en { 
-     //   gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
-     // }; 
-     // stepper_motor_reset: stepper_motor_reset { 
-     //   gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
-     // }; 
-     // stepper_motor_fault: stepper_motor_fault { 
-     //   gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
-     // }; 
-		stepper_motor_step: stepper_motor_step {
-			gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
-		};
-		stepper_motor_dir: stepper_motor_dir {
-			gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
-		};
-		stepper_motor_en: stepper_motor_en {
-			gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>;
-		};
+     camera_control1: camera_control1 { 
+       gpios = <&gpio1 35 GPIO_ACTIVE_LOW>; 
+     }; 
+     camera_control2: camera_control2 { 
+       gpios = <&gpio1 35 GPIO_ACTIVE_LOW>; 
+     }; 
+     led1: led1 { 
+       gpios = <&gpio1 35 GPIO_ACTIVE_HIGH>; 
+     }; 
+     led2: led2 { 
+       gpios = <&gpio1 34 GPIO_ACTIVE_HIGH>; 
+     }; 
+     led3: led3 { 
+       gpios = <&gpio1 39 GPIO_ACTIVE_HIGH>; 
+     }; 
+     led4: led4 { 
+       gpios = <&gpio1 36 GPIO_ACTIVE_HIGH>; 
+     }; 
+     stepper_motor_step: stepper_motor_step { 
+       gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>; 
+     }; 
+     stepper_motor_dir: stepper_motor_dir { 
+       gpios = <&gpio0 25 GPIO_ACTIVE_HIGH>; 
+     }; 
+     stepper_motor_en: stepper_motor_en { 
+       gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
+     }; 
+     stepper_motor_reset: stepper_motor_reset { 
+       gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
+     }; 
+     stepper_motor_fault: stepper_motor_fault { 
+       gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
+     }; 
 	};
-
-	// pwmleds {
-	// 	compatible = "pwm-leds";
-	// 	pwm_led_red: pwm_led_0 {
-	// 		label = "Red PWM LED";
-	// 		pwms = <&ledc0 0 PWM_HZ(100) PWM_POLARITY_NORMAL>;
-	// 	};
-	// 	pwm_led_green: pwm_led_1 {
-	// 		label = "Green PWM LED";
-	// 		pwms = <&ledc0 1 PWM_HZ(100) PWM_POLARITY_NORMAL>;
-	// 	};
-	// 	pwm_led_blue: pwm_led_2 {
-	// 		label = "Blue PWM LED";
-	// 		pwms = <&ledc0 2 PWM_HZ(100) PWM_POLARITY_NORMAL>;
-	// 	};
-	// };
-	power-states {
-		light_sleep: light_sleep {
-			compatible = "zephyr,power-state";
-			power-state-name = "standby";
-			min-residency-us = <200>;
-			exit-latency-us = <60>;
-		};
-
-		deep_sleep: deep_sleep {
-			compatible = "zephyr,power-state";
-			power-state-name = "soft-off";
-			min-residency-us = <2000>;
-			exit-latency-us = <212>;
-		};
-  };
 };
 
 &cpu0 {
 	clock-frequency = <ESP32_CLK_CPU_240M>;
-	cpu-power-states = <&light_sleep &deep_sleep>;
 };
 
 &cpu1 {
@@ -153,51 +94,6 @@
     friendly-name = "rangefinder";
     xshut-gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
   };
-};
-// &i2c0 {
-// 	status = "okay";
-// 	clock-frequency = <I2C_BITRATE_STANDARD>;
-// 	sda-gpios = <&gpio0 21 GPIO_OPEN_DRAIN>;
-// 	scl-gpios = <&gpio0 22 GPIO_OPEN_DRAIN>;
-// 	pinctrl-0 = <&i2c0_default>;
-// 	pinctrl-names = "default";
-// };
-
-&spi2 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	status = "okay";
-	pinctrl-0 = <&spim2_default>;
-	pinctrl-names = "default";
-};
-
-&spi3 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	status = "okay";
-	pinctrl-0 = <&spim3_default>;
-	pinctrl-names = "default";
-
-};
-
-&ledc0 {
-	pinctrl-0 = <&ledc0_default>;
-	pinctrl-names = "default";
-	status = "okay";
-	#address-cells = <1>;
-	#size-cells = <0>;
-	channel0@0 {
-		reg = <0x0>;
-		timer = <0>;
-	};
-	channel1@1 {
-		reg = <0x1>;
-		timer = <1>;
-	};
-	channel2@2 {
-		reg = <0x2>;
-		timer = <2>;
-	};
 };
 
 &trng0 {

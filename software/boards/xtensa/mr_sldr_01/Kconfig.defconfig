@@ -7,7 +7,7 @@ config BOARD
 	default "mr_sldr_01"
 	depends on BOARD_MR_SLDR_01
 
-config ENTROPY_GENERATOR # TODO remove?
+config ENTROPY_GENERATOR
 	default y
 
 config HEAP_MEM_POOL_SIZE

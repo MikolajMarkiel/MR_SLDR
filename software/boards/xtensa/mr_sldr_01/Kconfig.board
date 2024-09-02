@@ -5,6 +5,5 @@
 
 config BOARD_MR_SLDR_01
 	bool "MR_SLDR_01 Development Board"
-	depends on SOC_ESP32 # TODO check if there shouldn't be 'select' like in last project
-	# select SOC_ESP32
+	depends on SOC_ESP32
 
