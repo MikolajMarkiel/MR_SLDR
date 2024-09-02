@@ -27,3 +27,11 @@ add_custom_target(CreateCompileCommandsSymlink ALL
     ${CMAKE_SOURCE_DIR}/compile_commands.json
     COMMENT "Creating symbolic link for compile_commands.json in the project root"
 )
+
+# Link for purpose of `west espressif monitor` command
+add_custom_target(CreateBuildSymlink ALL
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+    ${CMAKE_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/build
+    COMMENT "Creating symbolic link 'build' pointing to the current build directory"
+)

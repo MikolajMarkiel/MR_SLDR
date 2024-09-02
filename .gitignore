@@ -1,6 +1,6 @@
 .vscode/
 .cache/
-build/
+build
 flash_monitor_esp32.sh
 *.swp
 *-backups/
