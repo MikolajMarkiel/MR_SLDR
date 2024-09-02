@@ -12,9 +12,9 @@
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/out/${presetName}",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
                 "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
-                "BOARD_ROOT": "${sourceDir}"
+                "BOARD_ROOT": "${sourceDir}",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "1"
             }
         },
         {

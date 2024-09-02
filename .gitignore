@@ -6,3 +6,4 @@ flash_monitor_esp32.sh
 *-backups/
 docs/
 out/
+compile_commands.json

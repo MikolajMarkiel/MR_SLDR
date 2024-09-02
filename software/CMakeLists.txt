@@ -2,9 +2,12 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
+
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
-project(blinky)
+# set(PROJECT_NAME MR_SLDR)
+
+project(MR_SLDR)
 
 target_sources(app PRIVATE 
   src/main.c
@@ -14,4 +17,13 @@ target_sources(app PRIVATE
   src/rangefinder.h
   src/slider_bt.c
   src/slider_bt.h
+)
+
+# Optionally, you can create a custom target just for creating the symlink
+add_custom_target(CreateCompileCommandsSymlink ALL
+    DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+    ${CMAKE_BINARY_DIR}/compile_commands.json
+    ${CMAKE_SOURCE_DIR}/compile_commands.json
+    COMMENT "Creating symbolic link for compile_commands.json in the project root"
 )
