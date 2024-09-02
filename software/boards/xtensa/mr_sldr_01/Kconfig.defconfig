@@ -7,8 +7,8 @@ config BOARD
 	default "mr_sldr_01"
 	depends on BOARD_MR_SLDR_01
 
-# config ENTROPY_GENERATOR // TODO remove?
-# 	default y
+config ENTROPY_GENERATOR # TODO remove?
+	default y
 
 config HEAP_MEM_POOL_SIZE
 	default 98304 if WIFI
