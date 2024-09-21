@@ -11,12 +11,14 @@ project(MR_SLDR)
 
 target_sources(app PRIVATE 
   src/main.c
-  src/stepper.c
-  src/stepper.h
-  src/rangefinder.c
-  src/rangefinder.h
-  src/slider_bt.c
-  src/slider_bt.h
+  src/slider.c
+  src/slider.h
+  src/stepper_motor.c
+  src/stepper_motor.h
+  # src/rangefinder.c
+  # src/rangefinder.h
+  # src/slider_bt.c
+  # src/slider_bt.h
 )
 
 # Optionally, you can create a custom target just for creating the symlink

@@ -27,6 +27,8 @@ SOFTWARE.
 extern "C" {
 #endif
 
+
+#include "stepper_motor.h"  
 #include <stdio.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/counter.h>
@@ -34,46 +36,65 @@ extern "C" {
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-#define SLIDER_STATUS_IDLE "Idle"
-#define SLIDER_STATUS_RUNNING "Runn"
-#define SLIDER_STATUS_HALTED "Halt"
-#define SLIDER_STATUS_ERROR "Erro"
-#define SLIDER_STATUS_CALIB "Cali"
+typedef enum 
+{
+  sliderStatus_idle,
+  sliderStatus_running,
+  sliderStatus_halted, 
+  sliderStatus_error,
+  sliderStatus_calib,
+  sliderStatus_end
+} sliderStatus_t;
 
 #define STEPS_FACTOR 100 // <x> steps for 1 mm move
 #define MIN_MOTOR_DELAY 50
 
-#define DEFAULT_START_POS 0
-#define DEFAULT_END_POS 50
-#define DEFAULT_SPEED 1000
-#define DEFAULT_DIR 1
-#define DEFAULT_INTERVAL_STEPS 2
-#define DEFAULT_INTERVAL_DELAY 250
-#define DEFAULT_SOFT_START 500
+#ifndef DEFAULT_START_POS
+  #define DEFAULT_START_POS 0
+#endif // !DEFAULT_START_POS
 
-typedef struct slider_params 
-{
-  char status[10];
-  uint32_t dir;
-  uint32_t start_pos;
-  uint32_t end_pos;
-  uint32_t duration;
-  uint32_t speed;
-  uint32_t steps;
-  uint32_t interval_steps;
-  uint32_t interval_delay;
-  uint32_t soft_start;
-} slider_params;
+#ifndef DEFAULT_END_POS
+  #define DEFAULT_END_POS 50
+#endif // !DEFAULT_END_POS
 
-extern slider_params slider;
+#ifndef DEFAULT_SPEED
+  #define DEFAULT_SPEED 1000
+#endif // !DEFAULT_SPEED
 
-int stepper_motor_init(void);
+#ifndef DEFAULT_DIR
+  #define DEFAULT_DIR stepperMotor_dir_forward
+#endif // !DEFAULT_DIR
 
-void slider_stop(void);
-int slider_calib(void);
-void slider_thread(void);
+// the default number of intervals in single slider process
+#ifndef DEFAULT_INTERVALS
+  #define DEFAULT_INTERVALS 4
+#endif // !DEFAULT_INTERVALS
 
-int stepper_motor_step_test();
+#ifndef DEFAULT_INTERVAL_DELAY
+  #define DEFAULT_INTERVAL_DELAY 250
+#endif // !DEFAULT_INTERVAL_DELAY
+
+#ifndef DEFAULT_SOFT_START
+  #define DEFAULT_SOFT_START 500
+#endif // !DEFAULT_SOFT_START
+
+#ifndef DISABLE_MOTOR_AT_INTERVALS
+  #define DISABLE_MOTOR_AT_INTERVALS false
+#endif // !DISABLE_MOTOR_AT_INTERVALS
+
+// Stepper Motor DTS
+#define MOTOR_GPIO_EN_DTS     stepper_motor_en
+#define MOTOR_GPIO_DIR_DTS    stepper_motor_dir
+#define MOTOR_GPIO_STEP_DTS   stepper_motor_step
+#define MOTOR_GPIO_RESET_DTS  stepper_motor_reset
+
+typedef struct slider* slider_ptr_t;
+typedef struct slider_thread_data* slider_thread_data_ptr_t;
+
+slider_ptr_t slider_init(void);
+int slider_deInit(slider_ptr_t pHandle);
+int slider_stop(slider_ptr_t pHandle);
+int slider_start(slider_ptr_t pHandle);
 
 #ifdef __cplusplus
 }
