@@ -1,0 +1,13 @@
+# Necessary
+- Q7 S & B should be exchanged
+- pullup for ESP32 en
+- BAT MEAS needs to be low on boot, so move it somewhere else
+- would be nice to change ESP32 pin30, because it needs to be low on startup 
+- led pins can only be inputs. Exchange with some inputs  See https://lastminuteengineers.com/esp32-wroom-32-pinout-reference/
+- USB move closer to the case 
+- move ESP to corner to extend BT radius. See docs
+
+# Optional
+- el. caps values & sizes could be smaller. Also inductors
+- shorts on power lines for tests
+- USB C junction 
