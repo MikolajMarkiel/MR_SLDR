@@ -21,24 +21,24 @@
 
 	leds {
 		compatible = "gpio-leds";
-     camera_control1: camera_control1 { 
-       gpios = <&gpio1 35 GPIO_ACTIVE_LOW>; 
-     }; 
-     camera_control2: camera_control2 { 
-       gpios = <&gpio1 35 GPIO_ACTIVE_LOW>; 
-     }; 
+     // camera_control1: camera_control1 { 
+     //   gpios = <&gpio1 0 GPIO_ACTIVE_LOW>; 
+     // }; 
+     // camera_control2: camera_control2 { 
+     //   gpios = <&gpio1 1 GPIO_ACTIVE_LOW>; 
+     // }; 
      led1: led1 { 
-       gpios = <&gpio1 35 GPIO_ACTIVE_HIGH>; 
+       gpios = <&gpio1 0 GPIO_ACTIVE_HIGH>; 
      }; 
      led2: led2 { 
-       gpios = <&gpio1 34 GPIO_ACTIVE_HIGH>; 
+       gpios = <&gpio1 1 GPIO_ACTIVE_HIGH>; 
      }; 
-     led3: led3 { 
-       gpios = <&gpio1 39 GPIO_ACTIVE_HIGH>; 
-     }; 
-     led4: led4 { 
-       gpios = <&gpio1 36 GPIO_ACTIVE_HIGH>; 
-     }; 
+     // led3: led3 { 
+     //   gpios = <&gpio1 7 GPIO_ACTIVE_HIGH>; 
+     // }; 
+     // led4: led4 { 
+     //   gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>; 
+     // }; 
      stepper_motor_step: stepper_motor_step { 
        gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>; 
      }; 
@@ -49,11 +49,11 @@
        gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
      }; 
      stepper_motor_reset: stepper_motor_reset { 
-       gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
+       gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>; 
      }; 
-     stepper_motor_fault: stepper_motor_fault { 
-       gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
-     }; 
+     // stepper_motor_fault: stepper_motor_fault { 
+     //   gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
+     // }; 
 	};
 };
 
