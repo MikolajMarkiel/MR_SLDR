@@ -23,12 +23,13 @@ SOFTWARE.
 
 // #include "rangefinder.h"
 // #include "slider_bt.h"
-#include "rangefinder.h"
 #include "slider.h"
-#include "zephyr/drivers/gpio.h"
-#include <stdbool.h>
+#include "led_manager.h"
+
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+
+#include <stdbool.h>
 
 LOG_MODULE_REGISTER(app);
 
@@ -42,49 +43,6 @@ struct appHandler {
 struct appHandler appHandler;
 
 int app_init(void);
-
-#define GET_GPIO(name, dts) static const struct gpio_dt_spec name = GPIO_DT_SPEC_GET(DT_NODELABEL(dts), gpios)
-
-GET_GPIO(led_1, led1);
-GET_GPIO(led_2, led2);
-
-static const struct gpio_dt_spec leds[] = 
-{
-    led_1,
-    led_2,
-};
-
-int leds_init()
-{
-    int result = 0, val = 0;
-    size_t num_leds = sizeof(leds)/sizeof(leds[0]);
-    for (size_t i = 0; i < num_leds; i++)
-    {
-        if (0 == gpio_is_ready_dt(&leds[i])) 
-        {
-            LOG_ERR("led %zu isn't ready", i);
-            result = -1;
-        }
-        else if (0 > (val = gpio_pin_configure_dt(&leds[i], GPIO_OUTPUT_ACTIVE))) 
-        {
-            LOG_ERR("led %zu configure failed %d", i, val);
-            result = -2;
-        }
-    }
-    return result;
-}
-
-int leds_blocking_test()
-{
-    k_msleep(1000);
-    size_t num_leds = sizeof(leds)/sizeof(leds[0]);
-    int result = 0;
-    for (size_t i = 0; i < num_leds; i++)
-    {
-        result = gpio_pin_toggle_dt(&leds[i]);
-    }
-    return 0;
-}
 
 int main(void) 
 {
