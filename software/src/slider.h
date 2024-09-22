@@ -79,7 +79,7 @@ typedef enum
 #endif // !DEFAULT_SOFT_START
 
 #ifndef DISABLE_MOTOR_AT_INTERVALS
-  #define DISABLE_MOTOR_AT_INTERVALS false
+  #define DISABLE_MOTOR_AT_INTERVALS true
 #endif // !DISABLE_MOTOR_AT_INTERVALS
 
 // Stepper Motor DTS
