@@ -87,8 +87,7 @@ stepperMotor_t* stepperMotor_init(struct gpio_dt_spec gpio_step, struct gpio_dt_
         result = -3;
     }
     else if(0 != gpio_pin_set_dt(&pHandle->gpio.step,  0)
-        ||  0 != gpio_pin_set_dt(&pHandle->gpio.dir,   0)
-        ||  0 != gpio_pin_set_dt(&pHandle->gpio.reset, 1))
+        ||  0 != gpio_pin_set_dt(&pHandle->gpio.dir,   0))
     {
         LOG_ERR("stepperMotor_init: Couldn't set stepper gpios");
         result = -4;
@@ -184,15 +183,14 @@ int stepperMotor_enable(stepperMotor_t* const handle)
         LOG_ERR("stepperMotor_enable: unable set 'dir' pin");
         result = -2;
     }
-    else if(0 != gpio_pin_set_dt(&handle->gpio.en, 0)) // TODO GPIO_OUTPUT_ACTIVE
+    else if(0 != gpio_pin_set_dt(&handle->gpio.en, 1)) // TODO GPIO_OUTPUT_ACTIVE
     {
-        LOG_ERR("stepperMotor_enable: unable reset 'en' pin");
+        LOG_ERR("stepperMotor_enable: unable set 'en' pin");
         result = -3;
     } 
     else 
     {
         handle->isEnabled = true;
-        LOG_INF("stepperMotor_enable: successfull");
         result = 0;
     }
     return result;
@@ -211,15 +209,14 @@ int stepperMotor_disable(stepperMotor_t* const handle)
         LOG_ERR("stepperMotor_disable: unable reset 'dir' pin");
         result = -2;
     }
-    else if(0 != gpio_pin_set_dt(&handle->gpio.en, 1)) // TODO GPIO_OUTPUT_ACTIVE
+    else if(0 != gpio_pin_set_dt(&handle->gpio.en, 0)) // TODO GPIO_OUTPUT_ACTIVE
     {
-        LOG_ERR("stepperMotor_disable: unable set 'en' pin");
+        LOG_ERR("stepperMotor_disable: unable reset 'en' pin");
         result = -3;
     } 
     else 
     {
         handle->isEnabled = false;
-        LOG_INF("stepperMotor_disable: successfull");
         result = 0;
     }
     return result;

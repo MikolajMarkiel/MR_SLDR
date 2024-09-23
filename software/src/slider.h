@@ -27,24 +27,7 @@ SOFTWARE.
 extern "C" {
 #endif
 
-
-#include "stepper_motor.h"  
-#include <stdio.h>
-#include <zephyr/device.h>
-#include <zephyr/drivers/counter.h>
-#include <zephyr/drivers/gpio.h>
-#include <zephyr/kernel.h>
-#include <zephyr/logging/log.h>
-
-typedef enum 
-{
-  sliderStatus_idle,
-  sliderStatus_running,
-  sliderStatus_halted, 
-  sliderStatus_error,
-  sliderStatus_calib,
-  sliderStatus_end
-} sliderStatus_t;
+#include <stdint.h>
 
 #define STEPS_FACTOR 100 // <x> steps for 1 mm move
 #define MIN_MOTOR_DELAY 50
@@ -54,7 +37,7 @@ typedef enum
 #endif // !DEFAULT_START_POS
 
 #ifndef DEFAULT_END_POS
-  #define DEFAULT_END_POS 50
+  #define DEFAULT_END_POS 15
 #endif // !DEFAULT_END_POS
 
 #ifndef DEFAULT_SPEED
@@ -67,7 +50,7 @@ typedef enum
 
 // the default number of intervals in single slider process
 #ifndef DEFAULT_INTERVALS
-  #define DEFAULT_INTERVALS 4
+  #define DEFAULT_INTERVALS 2
 #endif // !DEFAULT_INTERVALS
 
 #ifndef DEFAULT_INTERVAL_DELAY
@@ -88,6 +71,27 @@ typedef enum
 #define MOTOR_GPIO_STEP_DTS   stepper_motor_step
 #define MOTOR_GPIO_RESET_DTS  stepper_motor_reset
 
+typedef enum 
+{
+  sliderStatus_idle,
+  sliderStatus_running,
+  sliderStatus_halted, 
+  sliderStatus_error,
+  sliderStatus_calib,
+  sliderStatus_end
+} sliderStatus_t;
+
+typedef struct slider_config
+{
+    uint32_t start_pos;
+    uint32_t end_pos;
+    uint32_t duration;
+    uint32_t speed;
+    uint32_t intervals;
+    uint32_t interval_delay;
+    uint32_t soft_start;
+} slider_config_t;
+
 typedef struct slider* slider_ptr_t;
 typedef struct slider_thread_data* slider_thread_data_ptr_t;
 
@@ -95,6 +99,8 @@ slider_ptr_t slider_init(void);
 int slider_deInit(slider_ptr_t pHandle);
 int slider_stop(slider_ptr_t pHandle);
 int slider_start(slider_ptr_t pHandle);
+int slider_updateConfig(slider_ptr_t pHandle, slider_config_t *config);
+int slider_getConfig(slider_ptr_t pHandle, slider_config_t *config);
 
 #ifdef __cplusplus
 }

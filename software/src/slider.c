@@ -71,17 +71,17 @@ LOG_MODULE_REGISTER(stepper);
 
 K_THREAD_STACK_DEFINE(slider_thread_stack, SLIDER_THREAD_STACK);
 
-typedef struct slider_config
-{
-    uint32_t start_pos;
-    uint32_t end_pos;
-    uint32_t duration;
-    uint32_t speed;
-    uint32_t intervals;
-    uint32_t interval_delay;
-    uint32_t soft_start;
-} slider_config_t;
-
+// typedef struct slider_config
+// {
+//     uint32_t start_pos;
+//     uint32_t end_pos;
+//     uint32_t duration;
+//     uint32_t speed;
+//     uint32_t intervals;
+//     uint32_t interval_delay;
+//     uint32_t soft_start;
+// } slider_config_t;
+//
 typedef struct slider_timer 
 {
     struct counter_alarm_cfg alarm_cfg;
@@ -292,6 +292,36 @@ int slider_start(slider_ptr_t pHandle)
     return result; 
 }
 
+int slider_updateConfig(slider_ptr_t pHandle, slider_config_t *config) 
+{
+    int result = -1;
+    if((NULL == pHandle) || (NULL == config))
+    {
+        result = -1;
+    }
+    else
+    {
+        LOG_INF("config updated");
+        *pHandle->config = *config;
+        result = 0;
+    }
+    return result; 
+}
+
+int slider_getConfig(slider_ptr_t pHandle, slider_config_t *config) 
+{
+    int result = -1;
+    if((NULL == pHandle) || (NULL == config))
+    {
+        result = -1;
+    }
+    else
+    {
+        *config = *pHandle->config;
+        result = 0;
+    }
+    return result; 
+}
 
 static void slider_thread(void *pCtx, void *p2, void *p3)
 {

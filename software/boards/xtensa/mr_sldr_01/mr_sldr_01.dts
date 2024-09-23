@@ -46,10 +46,10 @@
        gpios = <&gpio0 25 GPIO_ACTIVE_HIGH>; 
      }; 
      stepper_motor_en: stepper_motor_en { 
-       gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
+       gpios = <&gpio0 04 GPIO_ACTIVE_LOW>; 
      }; 
      stepper_motor_reset: stepper_motor_reset { 
-       gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>; 
+       gpios = <&gpio0 27 GPIO_ACTIVE_LOW>; 
      }; 
      // stepper_motor_fault: stepper_motor_fault { 
      //   gpios = <&gpio0 04 GPIO_ACTIVE_HIGH>; 
