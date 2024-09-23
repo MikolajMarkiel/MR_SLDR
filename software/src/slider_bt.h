@@ -23,11 +23,12 @@ SOFTWARE.
 #ifndef __SLIDER_BT__
 #define __SLIDER_BT__
 
+#include "slider.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int slider_bt_init(void);
+int slider_bt_init(slider_ptr_t pSlider);
 
 void bt_notify_handler(void);
 

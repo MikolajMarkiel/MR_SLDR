@@ -19,8 +19,8 @@ target_sources(app PRIVATE
   src/led_manager.h
   # src/rangefinder.c
   # src/rangefinder.h
-  # src/slider_bt.c
-  # src/slider_bt.h
+  src/slider_bt.c
+  src/slider_bt.h
 )
 
 # Optionally, you can create a custom target just for creating the symlink

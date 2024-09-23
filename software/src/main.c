@@ -22,7 +22,7 @@ SOFTWARE.
 */
 
 // #include "rangefinder.h"
-// #include "slider_bt.h"
+#include "slider_bt.h"
 #include "slider.h"
 #include "led_manager.h"
 
@@ -33,7 +33,7 @@ SOFTWARE.
 
 LOG_MODULE_REGISTER(app);
 
-// K_THREAD_DEFINE(bt_notify, 1024, bt_notify_handler, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(bt_notify, 1024, bt_notify_handler, NULL, NULL, NULL, 7, 0, 0);
 
 struct appHandler {
     slider_ptr_t slider;
@@ -76,14 +76,28 @@ int app_init(void) {
     //     LOG_ERR("Distance meter init failed (err %d)", err);
     //     result = -3;
     // }
-    // else if (0 != (err = slider_bt_init())) {
-    //     LOG_ERR("Bluetooth module init failed [%d]", err);
-    //     result = -4;
-    // }
+    else if (0 != (err = slider_bt_init(appHandler.slider))) {
+        LOG_ERR("Bluetooth module init failed [%d]", err);
+        result = -4;
+    }
     else 
     {
         LOG_INF("Application started successfully");
-        slider_start(appHandler.slider); // TODO remove
+        // slider_start(appHandler.slider); // TODO remove
+
+        // slider_config_t s_config = {
+        //     .start_pos      = 5,
+        //     .end_pos        = 3,
+        //     .duration       = 10,
+        //     .speed          = 10,
+        //     .intervals      = 10,
+        //     .interval_delay = 10,
+        //     .soft_start     = 10,
+        // };
+        // slider_updateConfig(appHandler.slider, &s_config);
+
+
+
         result = 0;
     }
 
