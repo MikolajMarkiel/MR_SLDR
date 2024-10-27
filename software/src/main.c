@@ -33,10 +33,9 @@ SOFTWARE.
 
 LOG_MODULE_REGISTER(app);
 
-K_THREAD_DEFINE(bt_notify, 1024, bt_notify_handler, NULL, NULL, NULL, 7, 0, 0);
-
 struct appHandler {
     slider_ptr_t slider;
+    slider_bt_ptr_t slider_bt;
     // rangefinder_ptr_t rangefinder;
 };
 
@@ -67,7 +66,7 @@ int app_init(void) {
         LOG_ERR("Leds init failed [%d]", err);
         result = -1;
     }
-    else if (NULL == (appHandler.slider = slider_init())) 
+    else if (NULL == (appHandler.slider = slider_init()))
     {
         LOG_ERR("Slider init failed");
         result = -2;
@@ -76,7 +75,8 @@ int app_init(void) {
     //     LOG_ERR("Distance meter init failed (err %d)", err);
     //     result = -3;
     // }
-    else if (0 != (err = slider_bt_init(appHandler.slider))) {
+    else if (0 != (err = slider_bt_init(appHandler.slider)))
+    {
         LOG_ERR("Bluetooth module init failed [%d]", err);
         result = -4;
     }

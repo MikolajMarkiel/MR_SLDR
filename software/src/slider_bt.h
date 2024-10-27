@@ -28,9 +28,9 @@ SOFTWARE.
 extern "C" {
 #endif
 
-int slider_bt_init(slider_ptr_t pSlider);
+typedef struct slider_bt* slider_bt_ptr_t;
 
-void bt_notify_handler(void);
+int slider_bt_init(slider_ptr_t slider_ptr);
 
 #ifdef __cplusplus
 }

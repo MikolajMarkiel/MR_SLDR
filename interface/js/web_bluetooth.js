@@ -24,18 +24,18 @@ const color = {
 const att_array = []
 
 const service_uuid = "88a30000-6cfa-440d-8ddd-4a2d48a4812f"
-const status = new Attribute("0001", "notifyStatus", "notifyStatus", "string", null, true, false)
-const start_pos = new Attribute("0010", "#position", "#position_start", "int", null, true, true)
-const end_pos = new Attribute("0011", "#position", "#position_end", "int", null, true, true)
-// const duration = new Attribute("0012", "writeDurationButton", null, "notifyValueDuration", "int")
-const speed = new Attribute("0013", "#speed", "#speed_high", "int", null, true, true)
-const soft_start = new Attribute("0014", "#speed", "#speed_low", "int", null, true, true)
-const intervals = new Attribute("0015", "#interval_num", "#interval_num_val", "int", null, true, true)
-const int_delay = new Attribute("0016", "#interval_delay", "#interval_delay_val", "int", null, true, true)
+const status       = new Attribute("0001", "notifyStatus",    "notifyStatus",        "str",    null,    true,  false)
+const start_pos    = new Attribute("0010", "#position",       "#position_start",     "int",    null,    true,  true)
+const end_pos      = new Attribute("0011", "#position",       "#position_end",       "int",    null,    true,  true)
+// const duration  = new Attribute("0012", "writeDurationButton", null, "notifyValueDuration", "int")
+const speed        = new Attribute("0013", "#speed",          "#speed_high",         "int",    null,    true,  true)
+const soft_start   = new Attribute("0014", "#speed",          "#speed_low",          "int",    null,    true,  true)
+const intervals    = new Attribute("0015", "#interval_num",   "#interval_num_val",   "int",    null,    true,  true)
+const int_delay    = new Attribute("0016", "#interval_delay", "#interval_delay_val", "int",    null,    true,  true)
 
 //commands
-const cmd_start = new Attribute("0002", null, "#cmd_start", "string", "start", false, true)
-const cmd_stop = new Attribute("0002", null, "#cmd_stop", "string", "stop", false, true)
+const cmd_start    = new Attribute("0002", null,              "#cmd_start",          "str",    "start", false, true)
+const cmd_stop     = new Attribute("0002", null,              "#cmd_stop",           "str",    "stop",  false, true)
 // const cmd_check_conn = new Attribute("0001", null, "#connection", "string", "conn_status", false, )
 
 // //notify setup
@@ -58,19 +58,19 @@ const cmd_stop = new Attribute("0002", null, "#cmd_stop", "string", "stop", fals
 // intervals.enable_write = true
 // int_delay.enable_write = true
 //
-start_pos.css_val = "--value-a"
-end_pos.css_val = "--value-b"
-speed.css_val = "--value-b"
-soft_start.css_val = "--value-a"
-intervals.css_val = "--value"
-int_delay.css_val = "--value"
+start_pos.css_val   = "--value-a"
+end_pos.css_val     = "--value-b"
+speed.css_val       = "--value-b"
+soft_start.css_val  = "--value-a"
+intervals.css_val   = "--value"
+int_delay.css_val   = "--value"
 
-start_pos.css_text = "--text-value-a"
-end_pos.css_text = "--text-value-b"
-speed.css_text = "--text-value-b"
+start_pos.css_text  = "--text-value-a"
+end_pos.css_text    = "--text-value-b"
+speed.css_text      = "--text-value-b"
 soft_start.css_text = "--text-value-a"
-intervals.css_text = "--text-value"
-int_delay.css_text = "--text-value"
+intervals.css_text  = "--text-value"
+int_delay.css_text  = "--text-value"
 
 async function scanForDevices() {
   try {
@@ -134,16 +134,27 @@ async function handleNotification(event) {
 
 async function writeValue(att) {
   try {
-    const valueToWrite = att.val_id.value
+    let valueToWrite = att.val_id.value
     console.log("write", att)
-    att.val = parseInt(valueToWrite)
+
+    // //clear value 
+    // const clearValue = new Uint8Array(5); // adjust to max string length
+    // await att.ch.writeValue(clearValue);
+
+    valueToWrite = valueToWrite.padEnd(5, '\0').slice(0, 5);
+    if (att.val_type === "int") {
+    att.val = parseInt(valueToWrite);
+    } else if (att.val_type === "str") {
+    att.val = valueToWrite;
+    }
     if (att.id != null) {
       att.id.style.setProperty("--primary-color", color.pending)
     }
+
     const valueArray = new TextEncoder().encode(valueToWrite)
     const valueToWriteUint8 = new Uint8Array(valueArray)
+    console.log("Value written:", valueToWriteUint8)
     await att.ch.writeValue(valueToWriteUint8)
-    // console.log("Value written:", valueToWriteUint8)
   } catch (error) {
     console.log(att)
     console.error(error)
@@ -200,7 +211,6 @@ async function enableWrite() {
   }
 }
 document.getElementById("scanButton").addEventListener("click", scanForDevices)
-document.getElementById("connectButton").addEventListener("click", connectToDevice)
 document.getElementById("connectButton").addEventListener("click", connectToDevice)
 // document.getElementById("startButton").addEventListener("click", function() {
 //   command.val = "start"

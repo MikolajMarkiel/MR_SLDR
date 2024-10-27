@@ -292,35 +292,134 @@ int slider_start(slider_ptr_t pHandle)
     return result; 
 }
 
-int slider_updateConfig(slider_ptr_t pHandle, slider_config_t *config) 
+int slider_setParam(slider_ptr_t pHandle, sliderParam_t param, void * pValue)
 {
     int result = -1;
-    if((NULL == pHandle) || (NULL == config))
+    if ((NULL == pHandle) || (NULL == pValue))
     {
+        LOG_ERR("slider setParam: Missing pHandle pointer");
         result = -1;
     }
-    else
+    else 
     {
-        LOG_INF("config updated");
-        *pHandle->config = *config;
-        result = 0;
+        switch(param)
+        {
+            case sliderParam_startPos:
+            {
+                pHandle->config->start_pos = *(uint32_t*)pValue;
+                result = 0;
+            }
+            break;
+            case sliderParam_endPos:
+            {
+                pHandle->config->end_pos = *(uint32_t*)pValue;
+                result = 0;
+            }
+            break;
+            case sliderParam_duration:
+            {
+                pHandle->config->duration = *(uint32_t*)pValue;
+                result = 0;
+            }
+            break;
+            case sliderParam_speed:
+            {
+                pHandle->config->speed = *(uint32_t*)pValue;
+                result = 0;
+            }
+            break;
+            case sliderParam_intervals:
+            {
+                pHandle->config->intervals = *(uint32_t*)pValue;
+                result = 0;
+            }
+            break;
+            case sliderParam_intervalDelay:
+            {
+                pHandle->config->interval_delay = *(uint32_t*)pValue;
+                result = 0;
+            }
+            break;
+            case sliderParam_softStart:
+            {
+                pHandle->config->soft_start = *(uint32_t*)pValue;
+                result = 0;
+            }
+            break;
+            case sliderParam_none:
+            default:
+            {
+                LOG_ERR("slider setParam: wrong param");
+                result = -2;
+            }
+        }
     }
-    return result; 
+    return result;
 }
 
-int slider_getConfig(slider_ptr_t pHandle, slider_config_t *config) 
+int slider_getParam(slider_ptr_t pHandle, sliderParam_t param, void * pValue)
 {
     int result = -1;
-    if((NULL == pHandle) || (NULL == config))
+    if ((NULL == pHandle) || (NULL == pValue))
     {
+        LOG_ERR("slider setParam: Missing pHandle pointer");
         result = -1;
     }
-    else
+    else 
     {
-        *config = *pHandle->config;
-        result = 0;
+        switch(param)
+        {
+            case sliderParam_startPos:
+            {
+                *(uint32_t*)pValue = pHandle->config->start_pos;
+                result = 0;
+            }
+            break;
+            case sliderParam_endPos:
+            {
+                *(uint32_t*)pValue = pHandle->config->end_pos;
+                result = 0;
+            }
+            break;
+            case sliderParam_duration:
+            {
+                *(uint32_t*)pValue = pHandle->config->duration;
+                result = 0;
+            }
+            break;
+            case sliderParam_speed:
+            {
+                *(uint32_t*)pValue = pHandle->config->speed;
+                result = 0;
+            }
+            break;
+            case sliderParam_intervals:
+            {
+                *(uint32_t*)pValue = pHandle->config->intervals;
+                result = 0;
+            }
+            break;
+            case sliderParam_intervalDelay:
+            {
+                *(uint32_t*)pValue = pHandle->config->interval_delay;
+                result = 0;
+            }
+            break;
+            case sliderParam_softStart:
+            {
+                *(uint32_t*)pValue = pHandle->config->soft_start;
+                result = 0;
+            }
+            break;
+            case sliderParam_none:
+            default:
+            {
+                LOG_ERR("slider setParam: wrong param");
+                result = -2;
+            }
+        }
     }
-    return result; 
+    return result;
 }
 
 static void slider_thread(void *pCtx, void *p2, void *p3)
@@ -846,3 +945,285 @@ static int select_dir(slider_ptr_t pHandle)
 
     return result;
 }
+
+int slider_getStatus(void *handler, void *status)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    const char **value = (const char **)status;
+
+    if ((NULL == handler) || (NULL == status)) 
+    {
+        return -1; // Error: Invalid arguments
+    }
+    else {
+
+        // assume success
+        result = 0;
+        switch (pHandle->status) 
+        {
+            case sliderStatus_idle:
+                *value = "idle";
+                break;
+            case sliderStatus_running:
+                *value = "running";
+                break;
+            case sliderStatus_halted:
+                *value = "halted";
+                break;
+            case sliderStatus_error:
+                *value = "error";
+                break;
+            case sliderStatus_calib:
+                *value = "calib";
+                break;
+            case sliderStatus_end:
+                *value = "end";
+                break;
+            default:
+                *value = "unknown";
+                result = -2; // Error: Unknown status
+        }
+    }
+    return result; // Success
+}
+
+int slider_setStartPos(void *handler, void *value)
+{
+    LOG_INF("slider_setStartPos hello!");
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        pHandle->config->start_pos = *pValue;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_getStartPos(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        *pValue = pHandle->config->start_pos;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_setEndPos(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        pHandle->config->end_pos = *pValue;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_getEndPos(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        *pValue = pHandle->config->end_pos;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_setDuration(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        pHandle->config->duration = *pValue;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_getDuration(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        *pValue = pHandle->config->duration;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_setSpeed(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        pHandle->config->speed = *pValue;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_getSpeed(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        *pValue = pHandle->config->speed;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_setSoftStart(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        pHandle->config->soft_start = *pValue;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_getSoftStart(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        *pValue = pHandle->config->soft_start;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_setIntervals(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        pHandle->config->intervals = *pValue;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_getIntervals(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        *pValue = pHandle->config->intervals;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_setIntDelay(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = (slider_ptr_t)handler;
+    int *pValue = (int *)value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        pHandle->config->interval_delay = *pValue;
+        result = 0;
+    }
+    return result;
+}
+
+int slider_getIntDelay(void *handler, void *value)
+{
+    int result = -1;
+    slider_ptr_t pHandle = handler;
+    int * pValue = value;
+    if(NULL == handler)
+    {
+        result = -1;
+    }
+    else
+    {
+        *pValue = pHandle->config->interval_delay;
+        result = 0;
+    }
+    return result;
+}
+

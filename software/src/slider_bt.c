@@ -22,6 +22,7 @@ SOFTWARE.
 
 #define _GNU_SOURCE         /* See feature_test_macros(7) */
 
+#include "slider_bt.h"
 #include "slider.h"
 
 #include <zephyr/bluetooth/bluetooth.h>
@@ -39,110 +40,135 @@ SOFTWARE.
 
 LOG_MODULE_REGISTER(slider_bt);
 
-#define DEFAULT_WR_PROPS (BT_GATT_CHRC_READ  | BT_GATT_CHRC_WRITE  | BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_AUTH)
-#define DEFAULT_WR_PERMS (BT_GATT_PERM_READ  | BT_GATT_PERM_WRITE                                           )
-#define DEFAULT_RO_PROPS (BT_GATT_CHRC_READ  | BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_AUTH                      )
-#define DEFAULT_RO_PERMS (BT_GATT_PERM_READ                                                                 )
-#define DEFAULT_WO_PROPS (BT_GATT_CHRC_WRITE | BT_GATT_CHRC_AUTH                                            )
-#define DEFAULT_WO_PERMS (BT_GATT_PERM_WRITE                                                                )
-
-#define SLIDER_GATT_1 0x88A30000
-#define SLIDER_GATT_2 0x6CFA
-#define SLIDER_GATT_3 0x440D
-#define SLIDER_GATT_4 0x8DDD
-#define SLIDER_GATT_5 0x4A2D48A4812F
+#define SLIDER_GATT_PART1 0x88A30000
+#define SLIDER_GATT_PART2 0x6CFA
+#define SLIDER_GATT_PART3 0x440D
+#define SLIDER_GATT_PART4 0x8DDD
+#define SLIDER_GATT_PART5 0x4A2D48A4812F
 #define SLIDER_SERVICE_MASK 0xFFFF0000
 
 #define SLIDER_UUID(num) \
-BT_UUID_128_ENCODE((SLIDER_GATT_1 & SLIDER_SERVICE_MASK) | num, \
-                   SLIDER_GATT_2, SLIDER_GATT_3, SLIDER_GATT_4, SLIDER_GATT_5)
+    BT_UUID_128_ENCODE((SLIDER_GATT_PART1 & SLIDER_SERVICE_MASK) | num, \
+                       SLIDER_GATT_PART2, SLIDER_GATT_PART3, SLIDER_GATT_PART4, SLIDER_GATT_PART5)
 
 #define BT_UUID_SLIDER_SERVICE SLIDER_UUID(0x0000)
 
-// struct slider_params {
-//     char status[10];
-//     int start_pos;
-//     int end_pos;
-//     int duration;
-//     int speed;
-//     int soft_start;
-//     int interval_steps;
-//     int interval_delay;
-// };
+#define UUID_SUFFIX_SERVICE    (0x0000)
+#define UUID_SUFFIX_STATUS     (0x0001)
+#define UUID_SUFFIX_CMD        (0x0002)
+#define UUID_SUFFIX_START_POS  (0x0010)
+#define UUID_SUFFIX_END_POS    (0x0011)
+#define UUID_SUFFIX_DURATION   (0x0012)
+#define UUID_SUFFIX_SPEED      (0x0013)
+#define UUID_SUFFIX_SOFT_START (0x0014)
+#define UUID_SUFFIX_INTERVALS  (0x0015)
+#define UUID_SUFFIX_DELAY      (0x0016)
 
-typedef struct slider_params {
-  char status[10];
-  uint32_t dir;
-  uint32_t start_pos;
-  uint32_t end_pos;
-  uint32_t duration;
-  uint32_t speed;
-  uint32_t steps;
-  uint32_t interval_steps;
-  uint32_t interval_delay;
-  uint32_t soft_start;
-} slider_params;
-
-// struct param {
-//     uuid;
-//     value;
-//     name;
-//     props?;
-//     perms?;
-//     read_cb?;
-//     write_cb?;
-//
-// };
-//
-// struct main {
-//     ad;
-//     sd;
-//
-// };
+#define DEFAULT_WR_PROPS (BT_GATT_CHRC_READ  | BT_GATT_CHRC_WRITE  | BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_AUTH)
+#define DEFAULT_WR_PERMS (BT_GATT_PERM_READ  | BT_GATT_PERM_WRITE)
+#define DEFAULT_RO_PROPS (BT_GATT_CHRC_READ  | BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_AUTH)
+#define DEFAULT_RO_PERMS (BT_GATT_PERM_READ)
+#define DEFAULT_WO_PROPS (BT_GATT_CHRC_WRITE | BT_GATT_CHRC_AUTH)
+#define DEFAULT_WO_PERMS (BT_GATT_PERM_WRITE)
 
 
-// struct slider_params slider;
-// struct slider_params slider = {
-//     .status         = "idle",
-//     .start_pos      = DEFAULT_START_POS,
-//     .end_pos        = DEFAULT_END_POS,
-//     .duration       = 0,
-//     .speed          = DEFAULT_SPEED,
-//     .soft_start     = DEFAULT_SOFT_START,
-//     .interval_steps = DEFAULT_INTERVALS,
-//     .interval_delay = DEFAULT_INTERVAL_DELAY
-// };
+#define SLIDER_ADD_CHARACTERISTIC(_slider_bt, _type, _props, _perms, _read, _write) \
+    BT_GATT_CHARACTERISTIC(&_slider_bt.chrc[_type].uuid.uuid, _props, _perms, _read, _write, &_slider_bt.chrc[_type]), \
+    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE)
+    
+#define SLIDER_ADD_RO_STR_CHARACTERISTIC(_slider_bt, _type) \
+    SLIDER_ADD_CHARACTERISTIC(_slider_bt, _type, DEFAULT_RO_PROPS, DEFAULT_RO_PERMS, read_str_param, NULL)
+/*
+#define SLIDER_ADD_WR_STR_CHARACTERISTIC(_slider_bt, _type) \
+    SLIDER_ADD_CHARACTERISTIC(_slider_bt, _type, DEFAULT_WR_PROPS, DEFAULT_WR_PERMS, read_str_param, write_str_param)
 
-// static void slider_init_params(slider_params *slider) {
-//   strcpy(slider->status, "idle");
-//   slider->start_pos = DEFAULT_START_POS;
-//   slider->end_pos = DEFAULT_END_POS;
-//   slider->speed = DEFAULT_SPEED;
-//   slider->dir = 0;
-//   slider->interval_steps = DEFAULT_INTERVALS;
-//   slider->interval_delay = DEFAULT_INTERVAL_DELAY;
-//   slider->soft_start = DEFAULT_SOFT_START;
-//   slider->steps = 10;
-//   slider->duration = 10;
-// }
+#define SLIDER_ADD_WO_STR_CHARACTERISTIC(_slider_bt, _type) \
+    SLIDER_ADD_CHARACTERISTIC(_slider_bt, _type, DEFAULT_WO_PROPS, DEFAULT_WO_PERMS, NULL, write_str_param)
 
-char slider_status[12] = "idle";
+#define SLIDER_ADD_RO_INT_CHARACTERISTIC(_slider_bt, _type) \
+    SLIDER_ADD_CHARACTERISTIC(_slider_bt, _type, DEFAULT_RO_PROPS, DEFAULT_RO_PERMS, read_int_param, NULL)
+*/
+#define SLIDER_ADD_WR_INT_CHARACTERISTIC(_slider_bt, _type) \
+    SLIDER_ADD_CHARACTERISTIC(_slider_bt, _type, DEFAULT_WR_PROPS, DEFAULT_WR_PERMS, read_int_param, write_int_param)
+/*
+#define SLIDER_ADD_WO_INT_CHARACTERISTIC(_slider_bt, _type) \
+    SLIDER_ADD_CHARACTERISTIC(_slider_bt, _type, DEFAULT_WO_PROPS, DEFAULT_WO_PERMS, NULL, write_int_param)
+*/
 
-slider_ptr_t slider_ptr = NULL;
-slider_config_t slider; // TODO rename to config
+#define SLIDER_CHRC_COUNT 9
 
-static uint8_t bt_conn_cnt = 0;
+enum slider_chrc_type {
+    SLIDER_CHRC_STATUS,
+    SLIDER_CHRC_CMD,
+    SLIDER_CHRC_START_POS,
+    SLIDER_CHRC_END_POS,
+    SLIDER_CHRC_DURATION,
+    SLIDER_CHRC_SPEED,
+    SLIDER_CHRC_SOFT_START,
+    SLIDER_CHRC_INTERVALS,
+    SLIDER_CHRC_INT_DELAY,
+};
 
-static struct bt_uuid_128 slider_service_uuid    = BT_UUID_INIT_128(SLIDER_UUID(0x0000));
-static struct bt_uuid_128 slider_status_uuid     = BT_UUID_INIT_128(SLIDER_UUID(0x0001));
-static struct bt_uuid_128 slider_cmd_uuid        = BT_UUID_INIT_128(SLIDER_UUID(0x0002));
-static struct bt_uuid_128 slider_start_pos_uuid  = BT_UUID_INIT_128(SLIDER_UUID(0x0010));
-static struct bt_uuid_128 slider_end_pos_uuid    = BT_UUID_INIT_128(SLIDER_UUID(0x0011));
-static struct bt_uuid_128 slider_duration_uuid   = BT_UUID_INIT_128(SLIDER_UUID(0x0012));
-static struct bt_uuid_128 slider_speed_uuid      = BT_UUID_INIT_128(SLIDER_UUID(0x0013));
-static struct bt_uuid_128 slider_soft_start_uuid = BT_UUID_INIT_128(SLIDER_UUID(0x0014));
-static struct bt_uuid_128 slider_intervals_uuid  = BT_UUID_INIT_128(SLIDER_UUID(0x0015));
-static struct bt_uuid_128 slider_int_delay_uuid  = BT_UUID_INIT_128(SLIDER_UUID(0x0016));
+struct slider_chrc {
+    struct bt_uuid_128 uuid;
+    int last_int_value;
+    char *last_str_value;
+	int (*write_cb)(void *handler, void *value);
+	int (*read_cb)(void *handler, void *value);
+	int (*notify_cb)(struct slider_chrc *handler);
+};
+
+typedef struct slider_bt
+{
+    struct bt_conn_auth_cb auth_cb; 
+    struct bt_conn_cb conn_cb;
+    struct bt_uuid_128 service;
+    size_t param_count;
+    uint8_t conn_cnt;
+    slider_ptr_t slider;
+    struct slider_chrc chrc[SLIDER_CHRC_COUNT];
+} slider_bt_t;
+
+static void connected(struct bt_conn *conn, uint8_t err);
+static void disconnected(struct bt_conn *conn, uint8_t reason);
+static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey);
+static void auth_cancel(struct bt_conn *conn);
+static void ct_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value);
+
+static int bt_notify_diff_str(struct slider_chrc *handler);
+static int bt_notify_diff_int(struct slider_chrc *handler);
+static void bt_notify_handler(void);
+static ssize_t write_int_param(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags);
+static ssize_t read_int_param(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset);
+static ssize_t read_str_param(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset);
+static ssize_t cmd_handler(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags);
+
+slider_bt_t slider_bt = { 
+    .auth_cb = 
+    {
+        .passkey_display = auth_passkey_display,
+        .passkey_entry = NULL,
+        .cancel = auth_cancel,
+    },
+    .conn_cb =
+    {
+        .connected = connected,
+        .disconnected = disconnected,
+    },
+    .service    = BT_UUID_INIT_128(SLIDER_UUID(UUID_SUFFIX_SERVICE)),
+    .conn_cnt = 0,
+    .chrc = {
+        [SLIDER_CHRC_STATUS]     = { BT_UUID_INIT_128(SLIDER_UUID(UUID_SUFFIX_STATUS)),     -1, NULL, NULL,                slider_getStatus,    bt_notify_diff_str},
+        [SLIDER_CHRC_CMD]        = { BT_UUID_INIT_128(SLIDER_UUID(UUID_SUFFIX_CMD)),        -1, NULL, NULL,                NULL,                NULL},
+        [SLIDER_CHRC_START_POS]  = { BT_UUID_INIT_128(SLIDER_UUID(UUID_SUFFIX_START_POS)),  -1, NULL, slider_setStartPos,  slider_getStartPos,  bt_notify_diff_int},
+        [SLIDER_CHRC_END_POS]    = { BT_UUID_INIT_128(SLIDER_UUID(UUID_SUFFIX_END_POS)),    -1, NULL, slider_setEndPos,    slider_getEndPos,    bt_notify_diff_int},
+        [SLIDER_CHRC_DURATION]   = { BT_UUID_INIT_128(SLIDER_UUID(UUID_SUFFIX_DURATION)),   -1, NULL, slider_setDuration,  slider_getDuration,  NULL}, // TODO: fill callback
+        [SLIDER_CHRC_SPEED]      = { BT_UUID_INIT_128(SLIDER_UUID(UUID_SUFFIX_SPEED)),      -1, NULL, slider_setSpeed,     slider_getSpeed,     bt_notify_diff_int},
+        [SLIDER_CHRC_SOFT_START] = { BT_UUID_INIT_128(SLIDER_UUID(UUID_SUFFIX_SOFT_START)), -1, NULL, slider_setSoftStart, slider_getSoftStart, bt_notify_diff_int},
+        [SLIDER_CHRC_INTERVALS]  = { BT_UUID_INIT_128(SLIDER_UUID(UUID_SUFFIX_INTERVALS)),  -1, NULL, slider_setIntervals, slider_getIntervals, bt_notify_diff_int},
+        [SLIDER_CHRC_INT_DELAY]  = { BT_UUID_INIT_128(SLIDER_UUID(UUID_SUFFIX_DELAY)),      -1, NULL, slider_setIntDelay,  slider_getIntDelay,  bt_notify_diff_int},
+    },
+};
 
 static const struct bt_data ad[] = 
 {
@@ -158,208 +184,67 @@ static const struct bt_data sd[] =
     BT_DATA_BYTES(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME),
 };
 
-int buf_to_int(const void *buf, uint16_t len, uint32_t *val) 
-{
-    const char *buf_ptr = buf;
-    uint32_t temp_val;
-    char temp_str_1[11];
-    char temp_str_2[11];
-    memcpy(temp_str_1, buf, len);
-    temp_str_1[len] = 0;
-    temp_val = atoi(temp_str_1);
-    snprintk(temp_str_2, sizeof(temp_str_2), "%d", temp_val);
-    if (strcmp(temp_str_1, temp_str_2)) 
-    {
-        LOG_ERR("wrong int value, val_1: %s, val_2: %s", temp_str_1, temp_str_2);
-        return -1;
-    }
-    memcpy(val, &temp_val, sizeof(*val));
-    return 0;
-}
-
-static ssize_t write_int_param(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags) 
-{
-    int result = BT_ATT_ERR_INVALID_HANDLE;
-    uint32_t *param = attr->user_data;
-    if (buf_to_int(buf, len, param)) 
-    {
-        result = BT_ATT_ERR_VALUE_NOT_ALLOWED;
-    }
-    else if(0 != slider_updateConfig(slider_ptr, &slider))
-    {
-        result = BT_ATT_ERR_NOT_SUPPORTED;
-    }
-    else 
-    {
-        result = BT_ATT_ERR_SUCCESS;
-        LOG_INF("write value, int: %d", *param);
-    }
-    return ((BT_ATT_ERR_SUCCESS == result) ? len : BT_GATT_ERR(result));
-}
-static char* my_num = "123";
-
-char my_str[12] = { 0 };
-
-
-static ssize_t read_int_param(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset) 
-{
-    const uint32_t *param = attr->user_data;
-    char value[12] = {0};
-    snprintk(value, sizeof(value), "%d", *param);
-    LOG_INF("read value, int: %d, str: %s", *param, value);
-    ssize_t result = bt_gatt_attr_read(conn, attr, buf, len, offset, value, strlen(value));
-    return result;
-}
-
-static ssize_t read_str_param(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset) 
-{
-    const char *value = attr->user_data;
-    LOG_INF("read value, str: %s", value);
-
-    return bt_gatt_attr_read(conn, attr, buf, len, offset, value, strlen(value));
-}
-
-static ssize_t cmd_handler(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags) 
-{
-    static char cmd[10];
-    if (len > sizeof(cmd)) 
-    {
-        LOG_ERR("too long cmd input! resize buffer");
-        // memcpy(slider.status, SLIDER_STATUS_ERROR, 4);
-        return len;
-    }
-    memcpy(cmd, buf, len);
-
-    LOG_INF("cmd handler cmd: \"%s\"", cmd);
-    if (!memcmp(cmd, "start", len)) 
-    {
-        LOG_INF("slider command \"%s\"", cmd); // TODO remove
-        slider_start(slider_ptr);
-        memcpy(slider_status, "run ", 4);
-    }
-    else if (!memcmp(cmd, "stop", len)) 
-    {
-        LOG_INF("slider command \"%s\"", cmd);
-        // slider_stop();
-    }
-    else if (!memcmp(cmd, "calib", len)) 
-    {
-        LOG_INF("slider command \"%s\"", cmd);
-        // slider_calib();
-    }
-    else 
-    {
-        LOG_ERR("wrong command \"%s\"", cmd);
-    }
-    memset(cmd, 0, sizeof(cmd));
-    return len;
-}
-
-static void ct_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value) 
-{
-    /* TODO: Handle value */
-}
 
 BT_GATT_SERVICE_DEFINE
 (
-    slider_service, BT_GATT_PRIMARY_SERVICE(&slider_service_uuid.uuid),
-    BT_GATT_CHARACTERISTIC(&slider_status_uuid.uuid, DEFAULT_RO_PROPS, DEFAULT_RO_PERMS, read_str_param, write_int_param, slider_status),
-    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    BT_GATT_CHARACTERISTIC(&slider_start_pos_uuid.uuid, DEFAULT_WR_PROPS, DEFAULT_WR_PERMS, read_int_param, write_int_param, &slider.start_pos),
-    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    BT_GATT_CHARACTERISTIC(&slider_end_pos_uuid.uuid, DEFAULT_WR_PROPS, DEFAULT_WR_PERMS, read_int_param, write_int_param, &slider.end_pos),
-    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    BT_GATT_CHARACTERISTIC(&slider_duration_uuid.uuid, DEFAULT_WR_PROPS, DEFAULT_WR_PERMS, read_int_param, write_int_param, &slider.duration),
-    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    BT_GATT_CHARACTERISTIC(&slider_speed_uuid.uuid, DEFAULT_WR_PROPS, DEFAULT_WR_PERMS, read_int_param, write_int_param, &slider.speed),
-    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    BT_GATT_CHARACTERISTIC(&slider_soft_start_uuid.uuid, DEFAULT_WR_PROPS, DEFAULT_WR_PERMS, read_int_param, write_int_param, &slider.soft_start),
-    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    BT_GATT_CHARACTERISTIC(&slider_intervals_uuid.uuid, DEFAULT_WR_PROPS, DEFAULT_WR_PERMS, read_int_param, write_int_param, &slider.intervals),
-    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    BT_GATT_CHARACTERISTIC(&slider_int_delay_uuid.uuid, DEFAULT_WR_PROPS, DEFAULT_WR_PERMS, read_int_param, write_int_param, &slider.interval_delay),
-    BT_GATT_CCC(ct_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    BT_GATT_CHARACTERISTIC(&slider_cmd_uuid.uuid, DEFAULT_WO_PROPS, DEFAULT_WO_PERMS, NULL, cmd_handler, NULL), 
+    slider_service, BT_GATT_PRIMARY_SERVICE(&slider_bt.service.uuid),
+    SLIDER_ADD_RO_STR_CHARACTERISTIC(slider_bt, SLIDER_CHRC_STATUS),
+    SLIDER_ADD_WR_INT_CHARACTERISTIC(slider_bt, SLIDER_CHRC_START_POS),
+    SLIDER_ADD_WR_INT_CHARACTERISTIC(slider_bt, SLIDER_CHRC_END_POS),
+    SLIDER_ADD_WR_INT_CHARACTERISTIC(slider_bt, SLIDER_CHRC_DURATION),
+    SLIDER_ADD_WR_INT_CHARACTERISTIC(slider_bt, SLIDER_CHRC_SPEED),
+    SLIDER_ADD_WR_INT_CHARACTERISTIC(slider_bt, SLIDER_CHRC_SOFT_START),
+    SLIDER_ADD_WR_INT_CHARACTERISTIC(slider_bt, SLIDER_CHRC_INTERVALS),
+    SLIDER_ADD_WR_INT_CHARACTERISTIC(slider_bt, SLIDER_CHRC_INT_DELAY),
+    SLIDER_ADD_CHARACTERISTIC(slider_bt, SLIDER_CHRC_CMD, DEFAULT_WO_PROPS, DEFAULT_WO_PERMS, NULL, cmd_handler)
 );
 
-#define NOTIFY_SLIDER_STATUS         2
-#define NOTIFY_SLIDER_START_POS      NOTIFY_SLIDER_STATUS     + 3
-#define NOTIFY_SLIDER_END_POS        NOTIFY_SLIDER_START_POS  + 3
-#define NOTIFY_SLIDER_DURATION       NOTIFY_SLIDER_END_POS    + 3
-#define NOTIFY_SLIDER_SPEED          NOTIFY_SLIDER_DURATION   + 3
-#define NOTIFY_SLIDER_SOFT_START     NOTIFY_SLIDER_SPEED      + 3
-#define NOTIFY_SLIDER_INTERVALS      NOTIFY_SLIDER_SOFT_START + 3
-#define NOTIFY_SLIDER_INTERVAL_DELAY NOTIFY_SLIDER_INTERVALS  + 3
+K_THREAD_DEFINE(bt_notify, 1024, bt_notify_handler, NULL, NULL, NULL, 7, 0, 0);
 
-
-static void bt_notify_diff_str(const struct bt_gatt_attr *chrc, const void *current_msg, void *old_msg, size_t n) 
+int slider_bt_init(slider_ptr_t slider_ptr) 
 {
-    static int err;
-    if (!memcmp(old_msg, current_msg, n)) 
-    {
-        return;
-    }
-    memcpy(old_msg, current_msg, n);
-    // err = bt_gatt_notify(NULL, chrc, old_msg, n);
-    err = bt_gatt_notify(NULL, chrc, old_msg, sizeof(old_msg));
-    err = err == -ENOTCONN ? 0 : err;
-    // TODO exchange if server has opportunity to know that client notification is
-    // enabled
-    if (err) 
-    {
-        LOG_ERR("gatt notify failed, reason: %d", err);
-        return;
-    }
-    LOG_INF("notify: %s", (char *)old_msg);
-}
+    int result            = -1;
+    int err               = 0;
 
-static void bt_notify_diff_int(const struct bt_gatt_attr *chrc, const void *current_msg, void *old_msg, size_t n) 
-{
-    static int err;
-    static char buf[12];
-    static uint32_t *ptr;
-    if (!memcmp(old_msg, current_msg, n)) 
-    {
-        return;
-    }
-    memcpy(old_msg, current_msg, n);
-    ptr = (uint32_t *)current_msg;
-    snprintk(buf, sizeof(buf), "%04u", *ptr);
-    err = bt_gatt_notify(NULL, chrc, buf, sizeof(old_msg));
-    err = err == -ENOTCONN ? 0 : err;
-    // TODO exchange if server has opportunity to know that client notification is
-    // enabled
-    if (err) 
-    {
-        LOG_ERR("gatt notify failed, reason: %d", err);
-        return;
-    }
-    LOG_INF("notify: %u", *ptr);
-}
+    bt_conn_cb_register(&slider_bt.conn_cb);
 
-void bt_notify_handler(void) 
-{
-    static slider_config_t old_slider;
-    static char old_slider_status[12] = "idle";
-    old_slider = slider;
-    static uint8_t old_bt_conn_cnt = 0;
-    while (1) 
+    if(NULL == slider_ptr)
     {
-        // if (bt_conn_cnt > old_bt_conn_cnt) { // force to notify all
-        //   memset(&old_slider, 0xFF, sizeof(old_slider));
-        //   LOG_INF("reset old_slider");
-        // }
-        old_bt_conn_cnt = bt_conn_cnt;
-        bt_notify_diff_str(&slider_service.attrs[NOTIFY_SLIDER_STATUS],         &slider_status,         &old_slider_status,         sizeof(slider_status        ));
-        bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_START_POS],      &slider.start_pos,      &old_slider.start_pos,      sizeof(slider.start_pos     ));
-        bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_END_POS],        &slider.end_pos,        &old_slider.end_pos,        sizeof(slider.end_pos       ));
-        bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_DURATION],       &slider.duration,       &old_slider.duration,       sizeof(slider.duration      ));
-        bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_SPEED],          &slider.speed,          &old_slider.speed,          sizeof(slider.speed         ));
-        bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_SOFT_START],     &slider.soft_start,     &old_slider.soft_start,     sizeof(slider.soft_start    ));
-        bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_INTERVALS],      &slider.intervals,      &old_slider.intervals,      sizeof(slider.intervals     ));
-        bt_notify_diff_int(&slider_service.attrs[NOTIFY_SLIDER_INTERVAL_DELAY], &slider.interval_delay, &old_slider.interval_delay, sizeof(slider.interval_delay));
-        k_msleep(100);
+        LOG_ERR("null slider ptr");
+        result = -1;
     }
+    else 
+    {
+        if(0 != (err = bt_enable(NULL)))
+        {
+            LOG_ERR("Bluetooth init failed (err %d)", err);
+            result = -2;
+        }
+        else if(0 != (err = bt_conn_auth_cb_register(&slider_bt.auth_cb)))
+        {
+            LOG_ERR("bt_conn_auth_cb_register failed: (err %d)", err);
+            result = -3;
+        }
+        else if(0 != (err = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd))))
+        {
+            LOG_ERR("Advertising failed to start (err %d)", err);
+            result = -4;
+        }
+        else 
+        {
+            slider_bt.slider = slider_ptr;
+            LOG_INF("slider_bt success");
+            result = 0;
+        }
+    }
+
+    if (0 != result)
+    {
+        bt_le_adv_stop();
+        bt_disable();
+    }
+
+    return result;
 }
 
 static void connected(struct bt_conn *conn, uint8_t err) 
@@ -369,24 +254,18 @@ static void connected(struct bt_conn *conn, uint8_t err)
         printk("Connection failed (err %u)\n", err);
         return;
     }
-    bt_conn_cnt++;
-    LOG_INF("Connected, current connections: %d", bt_conn_cnt);
+    slider_bt.conn_cnt++;
+    LOG_INF("Connected, current connections: %d", slider_bt.conn_cnt);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason) 
 {
-    if (bt_conn_cnt > 0) 
+    if (slider_bt.conn_cnt > 0) 
     {
-        bt_conn_cnt--;
+        slider_bt.conn_cnt--;
     }
-    LOG_INF("Disconnected (reason %u), current connections: %d", reason, bt_conn_cnt);
+    LOG_INF("Disconnected (reason %u), current connections: %d", reason, slider_bt.conn_cnt);
 }
-
-BT_CONN_CB_DEFINE(conn_callbacks) = 
-    {
-        .connected = connected,
-        .disconnected = disconnected,
-    };
 
 static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey) 
 {
@@ -406,37 +285,226 @@ static void auth_cancel(struct bt_conn *conn)
     printk("Pairing cancelled: %s\n", addr);
 }
 
-static struct bt_conn_auth_cb auth_cb_display = 
-    {
-        .passkey_display = auth_passkey_display,
-        .passkey_entry = NULL,
-        .cancel = auth_cancel,
-    };
-
-int slider_bt_init(slider_ptr_t pSlider) 
+static void ct_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value) 
 {
-    int err;
-    err = bt_enable(NULL);
-    if (err) 
-    {
-        LOG_ERR("Bluetooth init failed (err %d)", err);
-        return 1;
-    }
-
-    err = bt_conn_auth_cb_register(&auth_cb_display);
-    if (err) 
-    {
-        LOG_ERR("bt_conn_auth_cb_register failed: (err %d)", err);
-        return 2;
-    }
-
-    err = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
-    if (err) 
-    {
-        LOG_ERR("Advertising failed to start (err %d)", err);
-        return 3;
-    }
-    slider_ptr = pSlider;
-    slider_getConfig(pSlider, &slider);
-    return 0;
+    /* TODO: Handle value */
 }
+
+static int bt_notify_diff_str(struct slider_chrc *handler) 
+{
+    int result = -1;
+    char *value = NULL;
+    struct bt_gatt_attr * attr = NULL;
+
+    if((NULL == handler) || (NULL == handler->read_cb))
+    {
+        result = -1;
+    }
+    else if(0 != handler->read_cb(slider_bt.slider, &value))
+    {
+        result = -2;
+    }
+    else if((NULL != value) && (NULL != handler->last_str_value) && (0 == strcmp(value, handler->last_str_value)))
+    {
+        // no change
+        result = 0;
+    }
+    else if (NULL == (attr = bt_gatt_find_by_uuid(slider_service.attrs, slider_service.attr_count, &handler->uuid.uuid)))
+    {
+        result = -3;
+    }
+    else if (0 != bt_gatt_notify(NULL, attr, value, strlen(value)))
+    {
+        result = -5;
+    }
+    else
+    {
+        handler->last_str_value = value;
+        result = 1;
+    }
+    // // TODO exchange if server has opportunity to know that client notification is
+    // // enabled
+    return result;
+}
+
+static int bt_notify_diff_int(struct slider_chrc *handler) 
+{
+    int result = -1;
+    int value = 0;
+    int err = 0;
+    char buf[6];
+    struct bt_gatt_attr * attr = NULL;
+    if((NULL == handler) || (NULL == handler->read_cb))
+    {
+        result = -1;
+    }
+    else if(0 != handler->read_cb(slider_bt.slider, &value))
+    {
+        result = -2;
+    }
+    else if(value == handler->last_int_value)
+    {
+        // no change
+        result = 0;
+    }
+    else if (NULL == (attr = bt_gatt_find_by_uuid(slider_service.attrs, slider_service.attr_count, &handler->uuid.uuid)))
+    {
+        result = -3;
+    }
+    else if(0 >= snprintk(buf, sizeof(buf), "%04u", value))
+    {
+        result = -4;
+    }
+    else if (0 != (err = bt_gatt_notify(NULL, attr, buf, strlen(buf))))
+    {
+        result = -5;
+    }
+    else
+    {
+        handler->last_int_value = value;
+        result = 1;
+    }
+    // // TODO exchange if server has opportunity to know that client notification is
+    // // enabled
+    return result;
+}
+
+static void bt_notify_handler(void) 
+{
+    int result = 0;
+    while(1)
+    {
+        for(size_t i = 0; i < SLIDER_CHRC_COUNT; i++)
+        {
+            if((0 == slider_bt.conn_cnt) || (NULL == slider_bt.chrc[i].notify_cb))
+            {
+                continue;
+            }
+            else if(0 > (result = slider_bt.chrc[i].notify_cb(&slider_bt.chrc[i])))
+            {
+                // LOG_ERR("gatt notify type %zu failed: %d", i, result);
+            }
+        }
+        k_msleep(100);
+    }
+}
+
+static ssize_t write_int_param(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags) 
+{
+    int result = -1;
+    int value = 0;
+    char val_str[12] = {0};
+
+    struct slider_chrc *chrc = (struct slider_chrc *)attr->user_data;
+    if ((NULL == chrc) || (NULL == chrc->write_cb)) 
+    {
+        LOG_ERR("write int value, invalid characteristic or write callback");
+        result = -1;
+    }
+    else if (0 > snprintk(val_str, len+1, "%s", (char *)buf)) 
+    {
+        LOG_ERR("write int value, buffer too small");
+        result = -2; // Error: Buffer too small
+    }
+    else if(0 > (value = atoi(val_str)))
+    {
+        LOG_ERR("write int value, atoi failed");
+        result = -3; // Error: atoi failed
+    }
+    else if (0 != (result = chrc->write_cb(slider_bt.slider, &value))) 
+    {
+        LOG_ERR("write int value, write cb failed");
+        result = -4; // Error: write_cb failed
+    }
+    else 
+    {
+        LOG_INF("write value, int: %d", value);
+        result = len; // Success
+    }
+    return result; // Success
+}
+
+static ssize_t read_int_param(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset) 
+{
+    struct slider_chrc *chrc = (struct slider_chrc *)attr->user_data; // TODO: remake
+    if ((NULL == chrc) || (NULL == chrc->read_cb))
+    {
+        LOG_INF("read int - error null param");
+        return -1; // Error: Invalid characteristic or read callback
+    }
+
+    int value;
+    int result = chrc->read_cb(slider_bt.slider, &value);
+    if (result < 0) 
+    {
+        LOG_INF("read int - error at cb %d", result);
+        return result; // Error: read_cb failed
+    }
+
+    char value_str[12] = {0};
+    snprintf(value_str, sizeof(value_str), "%d", value);
+    LOG_INF("read value, int: %d, str: %s", value, value_str);
+
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, value_str, strlen(value_str));
+}
+
+static ssize_t read_str_param(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset) 
+{
+    struct slider_chrc *chrc = (struct slider_chrc *)attr->user_data; // TODO: remake
+    if ((NULL == chrc) || (NULL == chrc->read_cb))
+    {
+        LOG_INF("read int - error null param");
+        return -1; // Error: Invalid characteristic or read callback
+    }
+
+    char *value;
+    int result = chrc->read_cb(slider_bt.slider, &value);
+    if (result < 0) 
+    {
+        LOG_INF("read int - error at cb %d", result);
+        return result; // Error: read_cb failed
+    }
+
+    LOG_INF("read value, str: %s", value);
+
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, value, strlen(value));
+}
+
+static ssize_t cmd_handler(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags) 
+{
+    int result = -1;
+    char cmd[10] = {0};
+    if (len > sizeof(cmd)) 
+    {
+        LOG_ERR("too long cmd input! resize buffer");
+        result = -1;
+    }
+    else if (NULL == strcpy(cmd, buf)) 
+    {
+        result = -2;
+    }
+    else {
+        // assume success
+        result = len;
+        LOG_INF("cmd handler cmd: \"%s\"", cmd);
+        if(0 == strcmp(cmd, "start"))
+        {
+            slider_start(slider_bt.slider);
+        }
+        else if(0 == strcmp(cmd, "stop"))
+        {
+            slider_stop(slider_bt.slider);
+        }
+        else if(0 == strcmp(cmd, "calib"))
+        {
+            // slider_calib(slider_bt.slider);
+        }
+        else
+        {
+            LOG_ERR("wrong command \"%s\"", cmd);
+            result = -3;
+        }
+    }
+    return result;
+}
+

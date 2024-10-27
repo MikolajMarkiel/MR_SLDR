@@ -81,6 +81,18 @@ typedef enum
   sliderStatus_end
 } sliderStatus_t;
 
+typedef enum
+{
+  sliderParam_none,
+  sliderParam_startPos,
+  sliderParam_endPos,
+  sliderParam_duration,
+  sliderParam_speed,
+  sliderParam_intervals,
+  sliderParam_intervalDelay,
+  sliderParam_softStart
+} sliderParam_t;
+
 typedef struct slider_config
 {
     uint32_t start_pos;
@@ -99,8 +111,22 @@ slider_ptr_t slider_init(void);
 int slider_deInit(slider_ptr_t pHandle);
 int slider_stop(slider_ptr_t pHandle);
 int slider_start(slider_ptr_t pHandle);
-int slider_updateConfig(slider_ptr_t pHandle, slider_config_t *config);
-int slider_getConfig(slider_ptr_t pHandle, slider_config_t *config);
+
+int slider_getStatus(void *handler, void *status);
+int slider_setStartPos(void *handler, void *value);
+int slider_getStartPos(void *handler, void *value);
+int slider_setEndPos(void *handler, void *value);
+int slider_getEndPos(void *handler, void *value);
+int slider_setDuration(void *handler, void *value);
+int slider_getDuration(void *handler, void *value);
+int slider_setSpeed(void *handler, void *value);
+int slider_getSpeed(void *handler, void *value);
+int slider_setSoftStart(void *handler, void *value);
+int slider_getSoftStart(void *handler, void *value);
+int slider_setIntervals(void *handler, void *value);
+int slider_getIntervals(void *handler, void *value);
+int slider_setIntDelay(void *handler, void *value);
+int slider_getIntDelay(void *handler, void *value);
 
 #ifdef __cplusplus
 }
