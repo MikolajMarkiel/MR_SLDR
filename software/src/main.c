@@ -21,7 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-// #include "rangefinder.h"
+#include "distanceMeter.h"
 #include "slider_bt.h"
 #include "slider.h"
 #include "led_manager.h"
@@ -36,7 +36,7 @@ LOG_MODULE_REGISTER(app);
 struct appHandler {
     slider_ptr_t slider;
     slider_bt_ptr_t slider_bt;
-    // rangefinder_ptr_t rangefinder;
+    distanceMeter_ptr_t distanceMeter;
 };
 
 struct appHandler appHandler;
@@ -50,7 +50,7 @@ int main(void)
     {
         while (1) 
         {
-            //     rangefinder_meas();
+            // distanceMeter_meas(appHandler.distanceMeter);
             leds_blocking_test();
             k_msleep(100);
         }
@@ -71,10 +71,10 @@ int app_init(void) {
         LOG_ERR("Slider init failed");
         result = -2;
     }
-    // else if (0 != (err = rangefinder_init(appHandler.rangefinder))) {
-    //     LOG_ERR("Distance meter init failed (err %d)", err);
-    //     result = -3;
-    // }
+    else if (0 != (err = distanceMeter_init(&appHandler.distanceMeter))) {
+        LOG_ERR("Distance meter init failed (err %d)", err);
+        result = -3;
+    }
     else if (0 != (err = slider_bt_init(appHandler.slider)))
     {
         LOG_ERR("Bluetooth module init failed [%d]", err);

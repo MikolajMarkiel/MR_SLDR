@@ -443,7 +443,7 @@ static void slider_thread(void *pCtx, void *p2, void *p3)
             break;
             case sliderStatus_halted:
             {
-                slider_end(pHandle);
+                pHandle->status = sliderStatus_idle;
             }
             break;
             case sliderStatus_error:
@@ -671,10 +671,15 @@ static void step_timer_cb(const struct device *counter_dev, uint8_t chan_id, uin
         LOG_ERR("step_timer_cb: null params");
         result = -1;
     }
+    else if(sliderStatus_running != slider->status)
+    {
+        LOG_INF("slider has been halted");
+        result = -2;
+    }
     else if(0 > (step_result = stepperMotor_step(slider->motor)))
     {
         LOG_ERR("step_timer_cb: stepperMotor_step fail");
-        result = -2;
+        result = -3;
     }
     else if ((0 == step_result) && (0 == slider->remaining_steps))
     {
@@ -835,7 +840,7 @@ static int slider_process(slider_ptr_t pHandle)
             }
             if(sliderStatus_running != pHandle->status)
             {
-                LOG_ERR("slider_process: The process halted during execution"); // TODO check if that is fine
+                LOG_INF("slider_process: The process halted during execution"); // TODO check if that is fine
                 result = -6;
                 break;
             }

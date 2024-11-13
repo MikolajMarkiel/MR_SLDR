@@ -63,7 +63,6 @@ int leds_init(void)
 
 int leds_blocking_test(void)
 {
-    k_msleep(1000);
     size_t num_leds = sizeof(leds)/sizeof(leds[0]);
     int result = 0;
     for (size_t i = 0; i < num_leds; i++)

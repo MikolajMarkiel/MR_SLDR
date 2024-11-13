@@ -474,12 +474,14 @@ static ssize_t cmd_handler(struct bt_conn *conn, const struct bt_gatt_attr *attr
 {
     int result = -1;
     char cmd[10] = {0};
-    if (len > sizeof(cmd)) 
+    char *buffer = (char *)buf;
+    k_msleep(500);
+    if (len > (sizeof(cmd) - 1)) 
     {
         LOG_ERR("too long cmd input! resize buffer");
         result = -1;
     }
-    else if (NULL == strcpy(cmd, buf)) 
+    else if (0 == snprintk(cmd, (len + 1), "%s", buffer)) 
     {
         result = -2;
     }

@@ -30,11 +30,13 @@ extern "C" {
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
 
-extern struct sensor_value rangefinder_value;
+// extern struct sensor_value distanceMeter_value;
 
-int rangefinder_init(void);
+typedef struct distanceMeter *distanceMeter_ptr_t;
 
-int rangefinder_meas();
+int distanceMeter_init(distanceMeter_ptr_t *pHandle);
+
+int distanceMeter_meas(distanceMeter_ptr_t pHandle);
 
 int distance_to_cm(struct sensor_value *val);
 

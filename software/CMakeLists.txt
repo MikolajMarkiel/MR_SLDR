@@ -17,8 +17,8 @@ target_sources(app PRIVATE
   src/stepper_motor.h
   src/led_manager.c
   src/led_manager.h
-  # src/rangefinder.c
-  # src/rangefinder.h
+  src/distanceMeter.c
+  src/distanceMeter.h
   src/slider_bt.c
   src/slider_bt.h
 )

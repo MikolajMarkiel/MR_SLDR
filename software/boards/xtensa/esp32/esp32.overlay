@@ -45,7 +45,7 @@
     compatible = "st,vl53l0x"; 
     reg = < 0x29 >;
     status = "okay";
-    friendly-name = "rangefinder";
+    friendly-name = "distance-meter";
     xshut-gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
   };
 };
